@@ -1,348 +1,3140 @@
-// ── UZAY ARKA PLAN ANİMASYONU ──
-const bgCanvas = document.getElementById('spaceBg');
-const bgCtx = bgCanvas.getContext('2d');
+/* =========================================================
+   COSMIC ARCADE
+   ========================================================= */
+
+
+/* =========================================================
+   UZAY ARKA PLANI
+========================================================= */
+
+const bgCanvas =
+  document.getElementById("spaceBg");
+
+const bgCtx =
+  bgCanvas.getContext("2d");
+
 let stars = [];
 
+let bgLast = 0;
+
+
 function resizeBg() {
+
   bgCanvas.width = window.innerWidth;
+
   bgCanvas.height = window.innerHeight;
-  stars = [];
-  for (let i = 0; i < 80; i++) {
-    stars.push({
-      x: Math.random() * bgCanvas.width,
-      y: Math.random() * bgCanvas.height,
-      size: Math.random() * 2,
-      speed: Math.random() * 0.5 + 0.1
-    });
-  }
+
+  stars = Array.from(
+    { length: 90 },
+    () => ({
+
+      x:
+        Math.random() *
+        bgCanvas.width,
+
+      y:
+        Math.random() *
+        bgCanvas.height,
+
+      size:
+        Math.random() * 1.8 + 0.3,
+
+      speed:
+        Math.random() * 20 + 8,
+
+      alpha:
+        Math.random() * 0.6 + 0.2
+
+    })
+  );
 }
-window.addEventListener('resize', resizeBg);
+
+
+function animateBg(time) {
+
+  const dt =
+    Math.min(
+      (time - bgLast) / 1000 || 0,
+      0.05
+    );
+
+  bgLast = time;
+
+  bgCtx.clearRect(
+    0,
+    0,
+    bgCanvas.width,
+    bgCanvas.height
+  );
+
+  for (const star of stars) {
+
+    star.y +=
+      star.speed * dt;
+
+    if (
+      star.y >
+      bgCanvas.height
+    ) {
+
+      star.y = -2;
+    }
+
+    bgCtx.globalAlpha =
+      star.alpha;
+
+    bgCtx.fillStyle =
+      "#ffffff";
+
+    bgCtx.fillRect(
+      star.x,
+      star.y,
+      star.size,
+      star.size
+    );
+  }
+
+  bgCtx.globalAlpha = 1;
+
+  requestAnimationFrame(
+    animateBg
+  );
+}
+
+
+window.addEventListener(
+  "resize",
+  resizeBg
+);
+
 resizeBg();
 
-function animateBg() {
-  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-  bgCtx.fillStyle = '#ffffff';
-  stars.forEach(s => {
-    s.y += s.speed;
-    if (s.y > bgCanvas.height) s.y = 0;
-    bgCtx.globalAlpha = Math.random() * 0.5 + 0.3;
-    bgCtx.fillRect(s.x, s.y, s.size, s.size);
-  });
-  requestAnimationFrame(animateBg);
-}
-animateBg();
+requestAnimationFrame(
+  animateBg
+);
 
-// ── OYUN CANVAS DİNAMİK BOYUTLANDIRMA ──
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
 
-function fitCanvasToScreen() {
-  const containerWidth = Math.min(window.innerWidth - 20, 600);
-  canvas.width = containerWidth;
-  canvas.height = Math.min(window.innerHeight * 0.55, 420);
-}
-fitCanvasToScreen();
-window.addEventListener('resize', fitCanvasToScreen);
+/* =========================================================
+   CANVAS
+========================================================= */
+
+const canvas =
+  document.getElementById(
+    "gameCanvas"
+  );
+
+const ctx =
+  canvas.getContext("2d");
+
 
 let currentGame = null;
-let gameLoopId = null;
+
+let gameLoopId = 0;
+
+let lastTime = 0;
+
 let score = 0;
+
 let isGameOver = false;
 
-// ── SES SENTEZLEYİCİSİ ──
-let audioCtx = null;
-function initAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let combo = 1;
+
+let runStats = {};
+
+
+const input = {
+
+  x: 0,
+
+  y: 0,
+
+  isPressed: false
+
+};
+
+
+const GAME_NAMES = {
+
+  evasion:
+    "CYBER-EVASION",
+
+  scroller:
+    "SPACE COLLECTOR",
+
+  jumper:
+    "PRECISION JUMPER"
+
+};
+
+
+/* =========================================================
+   ACHIEVEMENTS
+========================================================= */
+
+const ACHIEVEMENTS = [
+
+  {
+    id: "first",
+
+    icon: "🌟",
+
+    title: "İlk Uçuş",
+
+    desc:
+      "İlk oyununu tamamla.",
+
+    check:
+      s => s.games >= 1
+  },
+
+  {
+    id: "score500",
+
+    icon: "🏆",
+
+    title: "500 Kulübü",
+
+    desc:
+      "Herhangi bir oyunda 500+ skor yap.",
+
+    check:
+      s => s.best >= 500
+  },
+
+  {
+    id: "combo5",
+
+    icon: "🔥",
+
+    title: "Alev Alan",
+
+    desc:
+      "×5 combo'ya ulaş.",
+
+    check:
+      s => s.maxCombo >= 5
+  },
+
+  {
+    id: "crystals",
+
+    icon: "💎",
+
+    title: "Kristal Avcısı",
+
+    desc:
+      "Tek koşuda 10 kristal topla.",
+
+    check:
+      s => s.crystals >= 10
+  },
+
+  {
+    id: "perfect10",
+
+    icon: "🎯",
+
+    title: "Tam İsabet",
+
+    desc:
+      "10 başarılı jumper hamlesi yap.",
+
+    check:
+      s => s.jumps >= 10
+  },
+
+  {
+    id: "survivor",
+
+    icon: "🛡️",
+
+    title: "Hayatta Kalan",
+
+    desc:
+      "Cyber-Evasion'da 60 saniye dayan.",
+
+    check:
+      s => s.evasionTime >= 60
+  },
+
+  {
+    id: "daily",
+
+    icon: "☀️",
+
+    title: "Günlük Görev",
+
+    desc:
+      "Bugünün görevini tamamla.",
+
+    check:
+      s => s.dailyDone
+  },
+
+  {
+    id: "level5",
+
+    icon: "🚀",
+
+    title: "Seviye 5",
+
+    desc:
+      "Oyuncu seviyesini 5'e çıkar.",
+
+    check:
+      s => s.level >= 5
   }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+
+];
+
+
+/* =========================================================
+   LOCAL STORAGE
+========================================================= */
+
+function getData() {
+
+  return JSON.parse(
+
+    localStorage.getItem(
+      "cosmicData"
+    )
+
+    ||
+
+    `{
+      "xp":0,
+      "games":0,
+      "total":0,
+      "best":0,
+      "maxCombo":1,
+      "crystals":0,
+      "jumps":0,
+      "evasionTime":0,
+      "dailyDone":false,
+      "settings":{
+        "sound":true,
+        "vibration":true,
+        "particles":true
+      }
+    }`
+
+  );
 }
+
+
+function saveData(data) {
+
+  localStorage.setItem(
+    "cosmicData",
+    JSON.stringify(data)
+  );
+
+}
+
+
+/* =========================================================
+   LEVEL
+========================================================= */
+
+function levelInfo(xp) {
+
+  let level = 1;
+
+  let need = 100;
+
+  while (xp >= need) {
+
+    xp -= need;
+
+    level++;
+
+    need =
+      Math.floor(
+        100 *
+        Math.pow(
+          1.12,
+          level - 1
+        )
+      );
+  }
+
+  return {
+
+    level,
+
+    xp,
+
+    need
+
+  };
+
+}
+
+
+/* =========================================================
+   OYUN SONU İLERLEME
+========================================================= */
+
+function addProgress(points) {
+
+  const data =
+    getData();
+
+  data.xp +=
+    Math.max(
+      0,
+      Math.floor(points)
+    );
+
+  data.games += 1;
+
+  data.total +=
+    Math.max(
+      0,
+      Math.floor(score)
+    );
+
+  data.best =
+    Math.max(
+      data.best,
+      Math.floor(score)
+    );
+
+  data.maxCombo =
+    Math.max(
+      data.maxCombo,
+      combo
+    );
+
+  data.crystals =
+    Math.max(
+      data.crystals,
+      runStats.crystals || 0
+    );
+
+  data.jumps =
+    Math.max(
+      data.jumps,
+      runStats.jumps || 0
+    );
+
+  data.evasionTime =
+    Math.max(
+      data.evasionTime,
+      runStats.evasionTime || 0
+    );
+
+  const level =
+    levelInfo(data.xp);
+
+  data.level =
+    level.level;
+
+  saveData(data);
+
+}
+
+
+/* =========================================================
+   HIGH SCORE
+========================================================= */
+
+function getHighScore(game) {
+
+  return Number(
+    localStorage.getItem(
+      "high_" + game
+    ) || 0
+  );
+
+}
+
+
+function setHighScore(
+  game,
+  value
+) {
+
+  value =
+    Math.floor(value);
+
+  if (
+    value >
+    getHighScore(game)
+  ) {
+
+    localStorage.setItem(
+      "high_" + game,
+      value
+    );
+  }
+
+}
+
+
+/* =========================================================
+   MENU UPDATE
+========================================================= */
+
+function updateMenu() {
+
+  const data =
+    getData();
+
+  const level =
+    levelInfo(data.xp);
+
+
+  document.getElementById(
+    "player-level"
+  ).textContent =
+    `LEVEL ${level.level}`;
+
+
+  document.getElementById(
+    "xp-text"
+  ).textContent =
+    `${level.xp} / ${level.need}`;
+
+
+  document.getElementById(
+    "xp-fill"
+  ).style.width =
+    `${Math.min(
+      100,
+      level.xp /
+      level.need *
+      100
+    )}%`;
+
+
+  document.getElementById(
+    "total-score"
+  ).textContent =
+    data.total.toLocaleString(
+      "tr-TR"
+    );
+
+
+  document.getElementById(
+    "games-played"
+  ).textContent =
+    data.games;
+
+
+  [
+    "evasion",
+    "scroller",
+    "jumper"
+
+  ].forEach(game => {
+
+    document.getElementById(
+      "high-" + game
+    ).textContent =
+      `BEST ${getHighScore(game)}`;
+
+  });
+
+
+  updateDaily();
+
+}
+
+
+/* =========================================================
+   DAILY CHALLENGE
+========================================================= */
+
+function updateDaily() {
+
+  const data =
+    getData();
+
+  const target = 300;
+
+  const current =
+    Math.min(
+      target,
+      getHighScore("evasion")
+    );
+
+
+  document.getElementById(
+    "daily-progress-text"
+  ).textContent =
+    `${current} / ${target}`;
+
+
+  document.getElementById(
+    "daily-fill"
+  ).style.width =
+    `${current / target * 100}%`;
+
+
+  if (
+    current >= target &&
+    !data.dailyDone
+  ) {
+
+    data.dailyDone = true;
+
+    data.xp += 50;
+
+    saveData(data);
+
+  }
+
+}
+
+
+/* =========================================================
+   CANVAS BOYUTU
+========================================================= */
+
+function fitCanvasToScreen() {
+
+  const width =
+    Math.min(
+      window.innerWidth - 20,
+      760
+    );
+
+  const height =
+    Math.min(
+      window.innerHeight * 0.60,
+      520
+    );
+
+
+  canvas.width =
+    Math.max(
+      280,
+      width
+    );
+
+  canvas.height =
+    Math.max(
+      300,
+      height
+    );
+
+
+  input.x =
+    canvas.width / 2;
+
+  input.y =
+    canvas.height / 2;
+
+}
+
+
+window.addEventListener(
+  "resize",
+  () => {
+
+    if (
+      document
+        .getElementById(
+          "game-screen"
+        )
+        .classList.contains(
+          "active"
+        )
+    ) {
+
+      fitCanvasToScreen();
+
+    }
+
+  }
+);
+
+
+fitCanvasToScreen();
+
+
+/* =========================================================
+   AUDIO
+========================================================= */
+
+let audioCtx = null;
+
+
+function initAudio() {
+
+  if (
+    !getData()
+      .settings
+      .sound
+  ) {
+
+    return;
+  }
+
+
+  if (!audioCtx) {
+
+    audioCtx =
+      new (
+        window.AudioContext ||
+        window.webkitAudioContext
+      )();
+
+  }
+
+
+  if (
+    audioCtx.state ===
+    "suspended"
+  ) {
+
+    audioCtx.resume();
+
+  }
+
+}
+
 
 function playSound(type) {
-  if (!audioCtx) return;
-  try {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
 
-    if (type === 'collect') {
-      osc.frequency.setValueAtTime(520, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1040, audioCtx.currentTime + 0.1);
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    } else if (type === 'hit') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.25);
-      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.25);
-    } else if (type === 'jump') {
-      osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.08);
-      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+  if (
+    !getData()
+      .settings
+      .sound
+  ) {
+
+    return;
+  }
+
+  if (!audioCtx) {
+    return;
+  }
+
+
+  try {
+
+    const osc =
+      audioCtx.createOscillator();
+
+    const gain =
+      audioCtx.createGain();
+
+    osc.connect(gain);
+
+    gain.connect(
+      audioCtx.destination
+    );
+
+
+    const now =
+      audioCtx.currentTime;
+
+
+    if (
+      type === "collect"
+    ) {
+
+      osc.frequency
+        .setValueAtTime(
+          520,
+          now
+        );
+
+      osc.frequency
+        .exponentialRampToValueAtTime(
+          1040,
+          now + 0.1
+        );
+
+      gain.gain
+        .setValueAtTime(
+          0.18,
+          now
+        );
+
+      gain.gain
+        .exponentialRampToValueAtTime(
+          0.01,
+          now + 0.1
+        );
+
+      osc.start();
+
+      osc.stop(
+        now + 0.1
+      );
+
     }
-  } catch (e) {}
+
+
+    else if (
+      type === "hit"
+    ) {
+
+      osc.type =
+        "sawtooth";
+
+      osc.frequency
+        .setValueAtTime(
+          150,
+          now
+        );
+
+      osc.frequency
+        .exponentialRampToValueAtTime(
+          30,
+          now + 0.22
+        );
+
+      gain.gain
+        .setValueAtTime(
+          0.25,
+          now
+        );
+
+      gain.gain
+        .exponentialRampToValueAtTime(
+          0.01,
+          now + 0.22
+        );
+
+      osc.start();
+
+      osc.stop(
+        now + 0.22
+      );
+
+    }
+
+
+    else {
+
+      osc.frequency
+        .setValueAtTime(
+          300,
+          now
+        );
+
+      osc.frequency
+        .exponentialRampToValueAtTime(
+          650,
+          now + 0.08
+        );
+
+      gain.gain
+        .setValueAtTime(
+          0.13,
+          now
+        );
+
+      gain.gain
+        .exponentialRampToValueAtTime(
+          0.01,
+          now + 0.08
+        );
+
+      osc.start();
+
+      osc.stop(
+        now + 0.08
+      );
+
+    }
+
+  }
+
+  catch (error) {}
+
 }
 
-// ── DOKUNMATİK / MOUSE KONTROLLERİ ──
-const input = { x: canvas.width / 2, y: canvas.height / 2, isPressed: false };
+
+/* =========================================================
+   VIBRATION
+========================================================= */
+
+function vibrate(
+  duration = 45
+) {
+
+  const data =
+    getData();
+
+  if (
+    data.settings.vibration &&
+    navigator.vibrate
+  ) {
+
+    navigator.vibrate(
+      duration
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   INPUT
+========================================================= */
 
 function handlePointer(e) {
+
   initAudio();
-  const rect = canvas.getBoundingClientRect();
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  input.x = clientX - rect.left;
-  input.y = clientY - rect.top;
+
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+
+  const pointer =
+    e.touches?.[0] || e;
+
+
+  input.x =
+    (
+      pointer.clientX -
+      rect.left
+    )
+    *
+    (
+      canvas.width /
+      rect.width
+    );
+
+
+  input.y =
+    (
+      pointer.clientY -
+      rect.top
+    )
+    *
+    (
+      canvas.height /
+      rect.height
+    );
+
 }
 
-canvas.addEventListener('mousemove', handlePointer);
-canvas.addEventListener('touchmove', handlePointer, { passive: true });
-canvas.addEventListener('mousedown', (e) => { input.isPressed = true; handlePointer(e); });
-canvas.addEventListener('mouseup', () => input.isPressed = false);
-canvas.addEventListener('touchstart', (e) => { input.isPressed = true; handlePointer(e); }, { passive: true });
-canvas.addEventListener('touchend', () => input.isPressed = false);
 
-// ── MENÜ & SKOR ──
-function getHighScore(g) { return localStorage.getItem(`high_${g}`) || 0; }
-function setHighScore(g, val) {
-  if (val > getHighScore(g)) localStorage.setItem(`high_${g}`, Math.floor(val));
+canvas.addEventListener(
+  "pointermove",
+  handlePointer
+);
+
+
+canvas.addEventListener(
+  "pointerdown",
+  e => {
+
+    input.isPressed =
+      true;
+
+    handlePointer(e);
+
+  }
+);
+
+
+window.addEventListener(
+  "pointerup",
+  () => {
+
+    input.isPressed =
+      false;
+
+  }
+);
+
+
+/* =========================================================
+   SCORE
+========================================================= */
+
+function updateScore(
+  value
+) {
+
+  score = value;
+
+  document.getElementById(
+    "score"
+  ).textContent =
+    Math.floor(score);
+
 }
 
-function updateHighScoreBadges() {
-  ['evasion', 'scroller', 'jumper'].forEach(g => {
-    const el = document.getElementById(`high-${g}`);
-    if (el) el.textContent = `En Yüksek: ${getHighScore(g)}`;
-  });
+
+/* =========================================================
+   COMBO
+========================================================= */
+
+function setCombo(
+  value
+) {
+
+  combo =
+    Math.max(
+      1,
+      value
+    );
+
+
+  const element =
+    document.getElementById(
+      "combo-label"
+    );
+
+
+  element.textContent =
+    `COMBO ×${combo}`;
+
+
+  element.classList.remove(
+    "combo-hot"
+  );
+
+
+  void element.offsetWidth;
+
+
+  element.classList.add(
+    "combo-hot"
+  );
+
 }
+
+
+/* =========================================================
+   PARTICLE TEXT
+========================================================= */
+
+function showFloatingText(
+  text,
+  x,
+  y
+) {
+
+  if (
+    !getData()
+      .settings
+      .particles
+  ) {
+
+    return;
+  }
+
+
+  const element =
+    document.createElement(
+      "div"
+    );
+
+
+  element.className =
+    "particle-text";
+
+
+  element.textContent =
+    text;
+
+
+  element.style.left =
+    `${Math.min(
+      window.innerWidth - 80,
+      Math.max(
+        10,
+        x
+      )
+    )}px`;
+
+
+  element.style.top =
+    `${Math.max(
+      20,
+      y
+    )}px`;
+
+
+  document.body.appendChild(
+    element
+  );
+
+
+  setTimeout(
+    () => element.remove(),
+    700
+  );
+
+}
+
+
+/* =========================================================
+   PARTICLES
+========================================================= */
+
+let particles = [];
+
+
+function createParticles(
+  x,
+  y,
+  color = "#00f2fe",
+  count = 10
+) {
+
+  if (
+    !getData()
+      .settings
+      .particles
+  ) {
+
+    return;
+  }
+
+
+  for (
+    let i = 0;
+    i < count;
+    i++
+  ) {
+
+    particles.push({
+
+      x,
+
+      y,
+
+      vx:
+        (
+          Math.random() -
+          0.5
+        ) *
+        130,
+
+      vy:
+        (
+          Math.random() -
+          0.5
+        ) *
+        130,
+
+      life:
+        0.45,
+
+      max:
+        0.45,
+
+      color,
+
+      size:
+        Math.random() *
+        3 +
+        1
+
+    });
+
+  }
+
+}
+
+
+function drawParticles(
+  dt
+) {
+
+  for (
+    let i =
+      particles.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    const p =
+      particles[i];
+
+
+    p.life -= dt;
+
+    p.x +=
+      p.vx * dt;
+
+    p.y +=
+      p.vy * dt;
+
+    p.vy +=
+      80 * dt;
+
+
+    if (
+      p.life <= 0
+    ) {
+
+      particles.splice(
+        i,
+        1
+      );
+
+      continue;
+    }
+
+
+    ctx.globalAlpha =
+      p.life / p.max;
+
+    ctx.fillStyle =
+      p.color;
+
+    ctx.fillRect(
+      p.x,
+      p.y,
+      p.size,
+      p.size
+    );
+
+  }
+
+
+  ctx.globalAlpha = 1;
+
+}
+
+
+/* =========================================================
+   GAME CONTROL
+========================================================= */
+
+function cancelGame() {
+
+  cancelAnimationFrame(
+    gameLoopId
+  );
+
+  gameLoopId = 0;
+
+  lastTime = 0;
+
+}
+
 
 function showMenu() {
-  cancelAnimationFrame(gameLoopId);
-  document.getElementById('main-menu').classList.add('active');
-  document.getElementById('game-screen').classList.remove('active');
-  document.getElementById('game-over').classList.add('hidden');
-  updateHighScoreBadges();
+
+  cancelGame();
+
+
+  document
+    .getElementById(
+      "main-menu"
+    )
+    .classList.add(
+      "active"
+    );
+
+
+  document
+    .getElementById(
+      "game-screen"
+    )
+    .classList.remove(
+      "active"
+    );
+
+
+  document
+    .getElementById(
+      "game-over"
+    )
+    .classList.add(
+      "hidden"
+    );
+
+
+  updateMenu();
+
 }
 
-function launchGame(g) {
+
+function launchGame(
+  game
+) {
+
   initAudio();
-  document.getElementById('main-menu').classList.remove('active');
-  document.getElementById('game-screen').classList.add('active');
-  currentGame = g;
-  fitCanvasToScreen();
+
+
+  document
+    .getElementById(
+      "main-menu"
+    )
+    .classList.remove(
+      "active"
+    );
+
+
+  document
+    .getElementById(
+      "game-screen"
+    )
+    .classList.add(
+      "active"
+    );
+
+
+  currentGame =
+    game;
+
+
+  document.getElementById(
+    "game-title"
+  ).textContent =
+    GAME_NAMES[game];
+
+
+  document.getElementById(
+    "control-hint"
+  ).textContent =
+
+    game === "scroller"
+
+      ? "Basılı tut: yüksel • Bırak: düş"
+
+      : game === "jumper"
+
+      ? "Dokun: zıpla"
+
+      : "Sürükle: hareket et";
+
+
   restartCurrentGame();
+
 }
+
 
 function restartCurrentGame() {
-  document.getElementById('game-over').classList.add('hidden');
-  cancelAnimationFrame(gameLoopId);
+
+  document
+    .getElementById(
+      "game-over"
+    )
+    .classList.add(
+      "hidden"
+    );
+
+
+  cancelGame();
+
+
   score = 0;
+
+  combo = 1;
+
+  particles = [];
+
   isGameOver = false;
+
+
+  runStats = {
+
+    crystals: 0,
+
+    jumps: 0,
+
+    evasionTime: 0
+
+  };
+
+
   updateScore(0);
 
-  if (currentGame === 'evasion') initEvasion();
-  else if (currentGame === 'scroller') initScroller();
-  else if (currentGame === 'jumper') initJumper();
+  setCombo(1);
+
+
+  if (
+    currentGame ===
+    "evasion"
+  ) {
+
+    initEvasion();
+
+  }
+
+
+  if (
+    currentGame ===
+    "scroller"
+  ) {
+
+    initScroller();
+
+  }
+
+
+  if (
+    currentGame ===
+    "jumper"
+  ) {
+
+    initJumper();
+
+  }
+
 }
 
-function updateScore(val) {
-  score = val;
-  document.getElementById('score').textContent = Math.floor(score);
-}
 
-function triggerGameOver() {
+/* =========================================================
+   GAME OVER
+========================================================= */
+
+function triggerGameOver(
+  detail = ""
+) {
+
+  if (isGameOver) {
+    return;
+  }
+
+
   isGameOver = true;
-  playSound('hit');
-  setHighScore(currentGame, score);
-  document.getElementById('final-score').textContent = Math.floor(score);
-  document.getElementById('game-over').classList.remove('hidden');
+
+
+  playSound("hit");
+
+  vibrate(100);
+
+
+  setHighScore(
+    currentGame,
+    score
+  );
+
+
+  addProgress(
+    Math.floor(
+      score / 10
+    ) + 10
+  );
+
+
+  document.getElementById(
+    "final-score"
+  ).textContent =
+    Math.floor(score);
+
+
+  document.getElementById(
+    "result-detail"
+  ).textContent =
+    detail;
+
+
+  document
+    .getElementById(
+      "game-over"
+    )
+    .classList.remove(
+      "hidden"
+    );
+
+
+  updateMenu();
+
 }
 
-/* 1. CYBER-EVASION */
-let player, hazards, powerups, shieldActive;
+
+/* =========================================================
+   1. CYBER EVASION
+========================================================= */
+
+let player;
+
+let hazards;
+
+let powerups;
+
+let shieldActive;
+
+let shieldTimer;
+
+
 function initEvasion() {
-  player = { x: canvas.width / 2, y: canvas.height / 2, radius: 12 };
-  hazards = []; powerups = []; shieldActive = false;
+
+  player = {
+
+    x:
+      canvas.width / 2,
+
+    y:
+      canvas.height / 2,
+
+    radius:
+      12
+
+  };
+
+
+  hazards = [];
+
+  powerups = [];
+
+  shieldActive = false;
+
+  shieldTimer = null;
+
+
   loopEvasion();
+
 }
 
-function loopEvasion() {
-  if (isGameOver) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  player.x += (input.x - player.x) * 0.15;
-  player.y += (input.y - player.y) * 0.15;
+function loopEvasion(
+  timestamp
+) {
+
+  if (isGameOver) {
+    return;
+  }
+
+
+  const dt =
+    Math.min(
+      (
+        timestamp -
+        lastTime
+      ) / 1000 || 0.016,
+      0.04
+    );
+
+
+  lastTime =
+    timestamp;
+
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  ctx.fillStyle =
+    "rgba(5,9,19,.96)";
+
+  ctx.fillRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  player.x +=
+    (
+      input.x -
+      player.x
+    )
+    *
+    Math.min(
+      1,
+      9 * dt
+    );
+
+
+  player.y +=
+    (
+      input.y -
+      player.y
+    )
+    *
+    Math.min(
+      1,
+      9 * dt
+    );
+
+
+  /* POWERUP */
+
+  if (
+    Math.random() <
+    dt * 0.8 &&
+    powerups.length === 0
+  ) {
+
+    powerups.push({
+
+      x:
+        Math.random() *
+        (
+          canvas.width -
+          50
+        ) +
+        25,
+
+      y: -15,
+
+      r: 9
+
+    });
+
+  }
+
+
+  for (
+    let i =
+      powerups.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    const p =
+      powerups[i];
+
+
+    p.y +=
+      130 * dt;
+
+
+    ctx.fillStyle =
+      "#ffb703";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+      p.x,
+      p.y,
+      p.r,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    if (
+      Math.hypot(
+        player.x - p.x,
+        player.y - p.y
+      )
+      <
+      player.radius + p.r
+    ) {
+
+      shieldActive =
+        true;
+
+
+      clearTimeout(
+        shieldTimer
+      );
+
+
+      shieldTimer =
+        setTimeout(
+          () => {
+
+            shieldActive =
+              false;
+
+          },
+          4000
+        );
+
+
+      playSound(
+        "collect"
+      );
+
+      vibrate(35);
+
+      createParticles(
+        p.x,
+        p.y,
+        "#ffb703",
+        16
+      );
+
+
+      showFloatingText(
+        "SHIELD",
+        p.x,
+        p.y
+      );
+
+
+      powerups.splice(
+        i,
+        1
+      );
+
+
+      setCombo(
+        combo + 1
+      );
+
+    }
+
+
+    if (
+      p.y >
+      canvas.height + 20
+    ) {
+
+      powerups.splice(
+        i,
+        1
+      );
+
+    }
+
+  }
+
+
+  /* HAZARDS */
+
+  if (
+    Math.random() <
+    dt * 4.1
+  ) {
+
+    hazards.push({
+
+      x:
+        Math.random() *
+        canvas.width,
+
+      y: -15,
+
+      r:
+        Math.random() *
+        8 +
+        7,
+
+      s:
+        150 +
+        Math.random() *
+        90
+
+    });
+
+  }
+
+
+  for (
+    let i =
+      hazards.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    const h =
+      hazards[i];
+
+
+    h.y +=
+      h.s * dt;
+
+
+    ctx.fillStyle =
+      "#ff0055";
+
+
+    ctx.shadowBlur =
+      14;
+
+    ctx.shadowColor =
+      "#ff0055";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+      h.x,
+      h.y,
+      h.r,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.shadowBlur = 0;
+
+
+    const collision =
+      Math.hypot(
+        player.x - h.x,
+        player.y - h.y
+      )
+      <
+      player.radius + h.r;
+
+
+    if (collision) {
+
+      if (shieldActive) {
+
+        shieldActive =
+          false;
+
+        playSound("hit");
+
+        vibrate(45);
+
+        createParticles(
+          h.x,
+          h.y,
+          "#ffb703",
+          22
+        );
+
+        hazards.splice(
+          i,
+          1
+        );
+
+        setCombo(
+          combo + 1
+        );
+
+        continue;
+
+      }
+
+      else {
+
+        triggerGameOver(
+
+          `Combo ×${combo} • ${Math.floor(
+            runStats.evasionTime
+          )} sn`
+
+        );
+
+        return;
+
+      }
+
+    }
+
+
+    if (
+      h.y >
+      canvas.height + 30
+    ) {
+
+      hazards.splice(
+        i,
+        1
+      );
+
+    }
+
+  }
+
+
+  runStats.evasionTime +=
+    dt;
+
+
+  updateScore(
+    score + dt * 10
+  );
+
+
+  document.getElementById(
+    "game-stat-left"
+  ).textContent =
+
+    shieldActive
+
+      ? "🛡 KALKAN AKTİF"
+
+      : "SURVIVE";
+
+
+  document.getElementById(
+    "game-stat-right"
+  ).textContent =
+
+    `${Math.floor(
+      runStats.evasionTime
+    )}s`;
+
+
+  drawParticles(dt);
+
+
+  /* PLAYER */
+
+  ctx.fillStyle =
+    shieldActive
+      ? "#ffb703"
+      : "#00f2fe";
+
+
+  ctx.shadowBlur =
+    18;
+
+  ctx.shadowColor =
+    ctx.fillStyle;
+
 
   ctx.beginPath();
-  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-  ctx.fillStyle = shieldActive ? '#ffb703' : '#00f2fe';
+
+  ctx.arc(
+    player.x,
+    player.y,
+    player.radius,
+    0,
+    Math.PI * 2
+  );
+
   ctx.fill();
 
-  if (Math.random() < 0.004 && powerups.length === 0) {
-    powerups.push({ x: Math.random() * (canvas.width - 40) + 20, y: -10, radius: 9 });
+
+  if (shieldActive) {
+
+    ctx.strokeStyle =
+      "rgba(255,183,3,.7)";
+
+    ctx.lineWidth = 3;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+      player.x,
+      player.y,
+      20,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.stroke();
+
   }
 
-  for (let i = powerups.length - 1; i >= 0; i--) {
-    let p = powerups[i]; p.y += 2;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffb703'; ctx.fill();
 
-    if (Math.hypot(player.x - p.x, player.y - p.y) < player.radius + p.radius) {
-      shieldActive = true; playSound('collect'); powerups.splice(i, 1);
-      setTimeout(() => { shieldActive = false; }, 4000);
-    }
-  }
+  ctx.shadowBlur = 0;
 
-  if (Math.random() < 0.07) {
-    hazards.push({
-      x: Math.random() * canvas.width, y: -10,
-      radius: Math.random() * 8 + 7, speed: Math.random() * 3 + 2.5
-    });
-  }
 
-  for (let i = hazards.length - 1; i >= 0; i--) {
-    let h = hazards[i]; h.y += h.speed;
-    ctx.beginPath(); ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#ff0055'; ctx.fill();
+  gameLoopId =
+    requestAnimationFrame(
+      loopEvasion
+    );
 
-    if (Math.hypot(player.x - h.x, player.y - h.y) < player.radius + h.radius) {
-      if (shieldActive) { shieldActive = false; playSound('hit'); hazards.splice(i, 1); }
-      else { triggerGameOver(); return; }
-    }
-    if (h.y > canvas.height + 20) hazards.splice(i, 1);
-  }
-
-  updateScore(score + 0.1);
-  gameLoopId = requestAnimationFrame(loopEvasion);
 }
 
-/* 2. SPACE COLLECTOR */
-let ship, crystals, obstacles, energy;
+
+/* =========================================================
+   2. SPACE COLLECTOR
+========================================================= */
+
+let ship;
+
+let crystals;
+
+let obstacles;
+
+let energy;
+
+let scrollDistance;
+
+
 function initScroller() {
-  ship = { x: 50, y: canvas.height / 2, vy: 0, size: 12 };
-  crystals = []; obstacles = []; energy = 100;
+
+  ship = {
+
+    x: 55,
+
+    y:
+      canvas.height / 2,
+
+    vy: 0,
+
+    size: 12
+
+  };
+
+
+  crystals = [];
+
+  obstacles = [];
+
+  energy = 100;
+
+  scrollDistance = 0;
+
+
   loopScroller();
+
 }
 
-function loopScroller() {
-  if (isGameOver) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (input.isPressed) { ship.vy -= 0.45; energy -= 0.12; } 
-  else { ship.vy += 0.32; }
+function loopScroller(
+  timestamp
+) {
 
-  ship.vy *= 0.96; ship.y += ship.vy;
-
-  if (ship.y < 0 || ship.y > canvas.height || energy <= 0) {
-    triggerGameOver(); return;
+  if (isGameOver) {
+    return;
   }
 
-  ctx.fillStyle = '#4facfe'; ctx.beginPath();
-  ctx.arc(ship.x, ship.y, ship.size, 0, Math.PI * 2); ctx.fill();
 
-  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(10, 10, 100, 8);
-  ctx.fillStyle = energy > 30 ? '#00f2fe' : '#ff0055';
-  ctx.fillRect(10, 10, (energy / 100) * 100, 8);
+  const dt =
+    Math.min(
+      (
+        timestamp -
+        lastTime
+      ) / 1000 || 0.016,
+      0.04
+    );
 
-  if (Math.random() < 0.03) {
-    crystals.push({ x: canvas.width + 20, y: Math.random() * (canvas.height - 40) + 20 });
+
+  lastTime =
+    timestamp;
+
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  ctx.fillStyle =
+    "rgba(5,9,19,.96)";
+
+  ctx.fillRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  const acceleration =
+    230;
+
+
+  if (input.isPressed) {
+
+    ship.vy -=
+      acceleration * dt;
+
+    energy -=
+      8 * dt;
+
   }
 
-  for (let i = crystals.length - 1; i >= 0; i--) {
-    let c = crystals[i]; c.x -= 2.5;
-    ctx.fillStyle = '#00f2fe'; ctx.fillRect(c.x, c.y, 8, 8);
+  else {
 
-    if (Math.hypot(ship.x - c.x, ship.y - c.y) < ship.size + 8) {
-      crystals.splice(i, 1); energy = Math.min(100, energy + 25);
-      playSound('collect'); updateScore(score + 15);
-    } else if (c.x < -20) crystals.splice(i, 1);
+    ship.vy +=
+      175 * dt;
+
   }
 
-  if (Math.random() < 0.02) {
-    obstacles.push({ x: canvas.width + 20, y: Math.random() * (canvas.height - 60), w: 18, h: 55 });
+
+  ship.vy *=
+    Math.pow(
+      0.96,
+      dt * 60
+    );
+
+
+  ship.y +=
+    ship.vy * dt;
+
+
+  scrollDistance +=
+    170 * dt;
+
+
+  if (
+    ship.y < 0 ||
+    ship.y > canvas.height ||
+    energy <= 0
+  ) {
+
+    triggerGameOver(
+
+      `Mesafe ${Math.floor(
+        scrollDistance
+      )}m • Kristal ${
+        runStats.crystals
+      }`
+
+    );
+
+    return;
+
   }
 
-  for (let i = obstacles.length - 1; i >= 0; i--) {
-    let o = obstacles[i]; o.x -= 2.5;
-    ctx.fillStyle = '#ff0055'; ctx.fillRect(o.x, o.y, o.w, o.h);
 
-    if (ship.x + ship.size > o.x && ship.x - ship.size < o.x + o.w &&
-        ship.y + ship.size > o.y && ship.y - ship.size < o.y + o.h) {
-      triggerGameOver(); return;
+  /* CRYSTALS */
+
+  if (
+    Math.random() <
+    dt * 1.5
+  ) {
+
+    crystals.push({
+
+      x:
+        canvas.width + 20,
+
+      y:
+        Math.random() *
+        (
+          canvas.height -
+          60
+        ) +
+        30
+
+    });
+
+  }
+
+
+  for (
+    let i =
+      crystals.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    const c =
+      crystals[i];
+
+
+    c.x -=
+      180 * dt;
+
+
+    ctx.fillStyle =
+      "#00f2fe";
+
+
+    ctx.shadowBlur =
+      12;
+
+    ctx.shadowColor =
+      "#00f2fe";
+
+
+    ctx.save();
+
+    ctx.translate(
+      c.x,
+      c.y
+    );
+
+    ctx.rotate(
+      Math.PI / 4
+    );
+
+    ctx.fillRect(
+      -5,
+      -5,
+      10,
+      10
+    );
+
+    ctx.restore();
+
+
+    ctx.shadowBlur = 0;
+
+
+    if (
+      Math.hypot(
+        ship.x - c.x,
+        ship.y - c.y
+      )
+      <
+      ship.size + 9
+    ) {
+
+      crystals.splice(
+        i,
+        1
+      );
+
+
+      energy =
+        Math.min(
+          100,
+          energy + 24
+        );
+
+
+      runStats.crystals++;
+
+
+      const gained =
+        20 * combo;
+
+
+      updateScore(
+        score + gained
+      );
+
+
+      setCombo(
+        combo + 1
+      );
+
+
+      playSound(
+        "collect"
+      );
+
+
+      vibrate(25);
+
+
+      createParticles(
+        c.x,
+        c.y,
+        "#00f2fe",
+        14
+      );
+
+
+      showFloatingText(
+        `+${gained}`,
+        c.x,
+        c.y
+      );
+
     }
-    if (o.x < -30) obstacles.splice(i, 1);
+
+
+    else if (
+      c.x < -30
+    ) {
+
+      crystals.splice(
+        i,
+        1
+      );
+
+    }
+
   }
 
-  gameLoopId = requestAnimationFrame(loopScroller);
+
+  /* OBSTACLES */
+
+  if (
+    Math.random() <
+    dt * 0.85
+  ) {
+
+    obstacles.push({
+
+      x:
+        canvas.width + 20,
+
+      y:
+        Math.random() *
+        (
+          canvas.height -
+          100
+        ),
+
+      w: 22,
+
+      h:
+        60 +
+        Math.random() *
+        55
+
+    });
+
+  }
+
+
+  for (
+    let i =
+      obstacles.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    const o =
+      obstacles[i];
+
+
+    o.x -=
+      180 * dt;
+
+
+    ctx.fillStyle =
+      "#ff0055";
+
+
+    ctx.shadowBlur =
+      10;
+
+    ctx.shadowColor =
+      "#ff0055";
+
+
+    ctx.fillRect(
+      o.x,
+      o.y,
+      o.w,
+      o.h
+    );
+
+
+    ctx.shadowBlur = 0;
+
+
+    const collision =
+
+      ship.x +
+        ship.size >
+        o.x &&
+
+      ship.x -
+        ship.size <
+        o.x + o.w &&
+
+      ship.y +
+        ship.size >
+        o.y &&
+
+      ship.y -
+        ship.size <
+        o.y + o.h;
+
+
+    if (collision) {
+
+      triggerGameOver(
+
+        `Mesafe ${Math.floor(
+          scrollDistance
+        )}m • Kristal ${
+          runStats.crystals
+        }`
+
+      );
+
+      return;
+
+    }
+
+
+    if (
+      o.x < -40
+    ) {
+
+      obstacles.splice(
+        i,
+        1
+      );
+
+    }
+
+  }
+
+
+  /* ENERGY */
+
+  ctx.fillStyle =
+    "rgba(255,255,255,.08)";
+
+  ctx.fillRect(
+    12,
+    12,
+    120,
+    8
+  );
+
+
+  ctx.fillStyle =
+    energy > 30
+      ? "#00f2fe"
+      : "#ff0055";
+
+
+  ctx.fillRect(
+    12,
+    12,
+    120 *
+      energy /
+      100,
+    8
+  );
+
+
+  /* SHIP */
+
+  ctx.fillStyle =
+    "#4facfe";
+
+
+  ctx.shadowBlur =
+    18;
+
+  ctx.shadowColor =
+    "#4facfe";
+
+
+  ctx.beginPath();
+
+  ctx.arc(
+    ship.x,
+    ship.y,
+    ship.size,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  ctx.shadowBlur = 0;
+
+
+  document.getElementById(
+    "game-stat-left"
+  ).textContent =
+    `ENERGY ${Math.ceil(
+      energy
+    )}%`;
+
+
+  document.getElementById(
+    "game-stat-right"
+  ).textContent =
+    `${Math.floor(
+      scrollDistance
+    )}m`;
+
+
+  updateScore(
+    score + dt * 2
+  );
+
+
+  drawParticles(dt);
+
+
+  gameLoopId =
+    requestAnimationFrame(
+      loopScroller
+    );
+
 }
 
-/* 3. PRECISION JUMPER */
-let angle, jumperPlayer, center, hazardAngles, lastJumpState;
+
+/* =========================================================
+   3. PRECISION JUMPER
+========================================================= */
+
+let angle;
+
+let jumperPlayer;
+
+let center;
+
+let hazardAngles;
+
+let lastJumpState;
+
+
 function initJumper() {
-  const minDim = Math.min(canvas.width, canvas.height);
-  center = { x: canvas.width / 2, y: canvas.height / 2, r: minDim * 0.25 };
+
+  const minDimension =
+    Math.min(
+      canvas.width,
+      canvas.height
+    );
+
+
+  center = {
+
+    x:
+      canvas.width / 2,
+
+    y:
+      canvas.height / 2,
+
+    r:
+      minDimension * 0.25
+
+  };
+
+
   angle = 0;
-  jumperPlayer = { r: center.r, size: 8, jumping: false, jumpHeight: 0 };
-  hazardAngles = [Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
-  lastJumpState = false;
+
+
+  jumperPlayer = {
+
+    size: 9,
+
+    jumping: false,
+
+    jumpHeight: 0,
+
+    jumpStart: 0
+
+  };
+
+
+  hazardAngles = [
+
+    Math.PI / 2,
+
+    Math.PI,
+
+    (3 * Math.PI) / 2
+
+  ];
+
+
+  lastJumpState =
+    false;
+
+
   loopJumper();
+
 }
 
-function loopJumper() {
-  if (isGameOver) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  angle += 0.035;
+function loopJumper(
+  timestamp
+) {
 
-  if (input.isPressed && !lastJumpState && !jumperPlayer.jumping) {
-    jumperPlayer.jumping = true;
-    jumperPlayer.jumpHeight = 45;
-    playSound('jump');
-  }
-  lastJumpState = input.isPressed;
-
-  if (jumperPlayer.jumping) {
-    jumperPlayer.jumpHeight -= 2.2;
-    if (jumperPlayer.jumpHeight <= 0) {
-      jumperPlayer.jumping = false;
-      jumperPlayer.jumpHeight = 0;
-      updateScore(score + 1);
-    }
+  if (isGameOver) {
+    return;
   }
 
-  ctx.strokeStyle = 'rgba(0, 242, 254, 0.4)';
-  ctx.lineWidth = 3; ctx.beginPath();
-  ctx.arc(center.x, center.y, center.r, 0, Math.PI * 2); ctx.stroke();
 
-  let currentR = center.r + jumperPlayer.jumpHeight;
-  let px = center.x + Math.cos(angle) * currentR;
-  let py = center.y + Math.sin(angle) * currentR;
+  const dt =
+    Math.min(
+      (
+        timestamp -
+        lastTime
+      ) / 1000 || 0.016,
+      0.04
+    );
 
-  ctx.fillStyle = '#00f2fe'; ctx.beginPath();
-  ctx.arc(px, py, jumperPlayer.size, 0, Math.PI * 2); ctx.fill();
 
-  hazardAngles.forEach(hAngle => {
-    let hx = center.x + Math.cos(hAngle) * center.r;
-    let hy = center.y + Math.sin(hAngle) * center.r;
+  lastTime =
+    timestamp;
 
-    ctx.fillStyle = '#ff0055'; ctx.beginPath();
-    ctx.arc(hx, hy, 10, 0, Math.PI * 2); ctx.fill();
 
-    if (Math.hypot(px - hx, py - hy) < jumperPlayer.size + 10) {
-      triggerGameOver(); return;
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  ctx.fillStyle =
+    "rgba(5,9,19,.96)";
+
+  ctx.fillRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  angle +=
+    1.55 * dt;
+
+
+  /* JUMP */
+
+  if (
+    input.isPressed &&
+    !lastJumpState &&
+    !jumperPlayer.jumping
+  ) {
+
+    jumperPlayer.jumping =
+      true;
+
+    jumperPlayer.jumpHeight =
+      46;
+
+    jumperPlayer.jumpStart =
+      angle;
+
+
+    playSound(
+      "jump"
+    );
+
+    vibrate(25);
+
+  }
+
+
+  lastJumpState =
+    input.isPressed;
+
+
+  if (
+    jumperPlayer.jumping
+  ) {
+
+    jumperPlayer.jumpHeight -=
+      115 * dt;
+
+
+    if (
+      jumperPlayer.jumpHeight <=
+      0
+    ) {
+
+      jumperPlayer.jumping =
+        false;
+
+      jumperPlayer.jumpHeight =
+        0;
+
+
+      runStats.jumps++;
+
+
+      updateScore(
+        score +
+        10 * combo
+      );
+
     }
+
+  }
+
+
+  /* ORBIT */
+
+  ctx.strokeStyle =
+    "rgba(0,242,254,.35)";
+
+  ctx.lineWidth = 3;
+
+
+  ctx.beginPath();
+
+  ctx.arc(
+    center.x,
+    center.y,
+    center.r,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.stroke();
+
+
+  const currentRadius =
+    center.r +
+    jumperPlayer.jumpHeight;
+
+
+  const px =
+    center.x +
+    Math.cos(angle) *
+    currentRadius;
+
+
+  const py =
+    center.y +
+    Math.sin(angle) *
+    currentRadius;
+
+
+  /* HAZARDS */
+
+  for (
+    const hazardAngle
+    of hazardAngles
+  ) {
+
+    const hx =
+      center.x +
+      Math.cos(
+        hazardAngle
+      ) *
+      center.r;
+
+
+    const hy =
+      center.y +
+      Math.sin(
+        hazardAngle
+      ) *
+      center.r;
+
+
+    ctx.fillStyle =
+      "#ff0055";
+
+
+    ctx.shadowBlur =
+      12;
+
+    ctx.shadowColor =
+      "#ff0055";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+      hx,
+      hy,
+      11,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.shadowBlur = 0;
+
+
+    const distance =
+      Math.hypot(
+        px - hx,
+        py - hy
+      );
+
+
+    if (
+      distance <
+      jumperPlayer.size +
+      11
+    ) {
+
+      triggerGameOver(
+
+        `${runStats.jumps} başarılı zıplama • Combo ×${combo}`
+
+      );
+
+      return;
+
+    }
+
+
+    if (
+      !jumperPlayer.jumping &&
+      distance < 28 &&
+      Math.abs(
+        Math.sin(
+          angle -
+          hazardAngle
+        )
+      ) < 0.22
+    ) {
+
+      setCombo(
+        combo + 1
+      );
+
+    }
+
+  }
+
+
+  /* PLAYER */
+
+  ctx.fillStyle =
+    "#00f2fe";
+
+
+  ctx.shadowBlur =
+    18;
+
+  ctx.shadowColor =
+    "#00f2fe";
+
+
+  ctx.beginPath();
+
+  ctx.arc(
+    px,
+    py,
+    jumperPlayer.size,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  ctx.shadowBlur = 0;
+
+
+  document.getElementById(
+    "game-stat-left"
+  ).textContent =
+
+    jumperPlayer.jumping
+      ? "JUMP!"
+      : "READY";
+
+
+  document.getElementById(
+    "game-stat-right"
+  ).textContent =
+    `JUMPS ${runStats.jumps}`;
+
+
+  drawParticles(dt);
+
+
+  gameLoopId =
+    requestAnimationFrame(
+      loopJumper
+    );
+
+}
+
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+function openModal(
+  html
+) {
+
+  document.getElementById(
+    "modal-content"
+  ).innerHTML =
+    html;
+
+
+  document.getElementById(
+    "modal"
+  ).classList.remove(
+    "hidden"
+  );
+
+}
+
+
+function closeModal() {
+
+  document.getElementById(
+    "modal"
+  ).classList.add(
+    "hidden"
+  );
+
+}
+
+
+/* =========================================================
+   ACHIEVEMENTS MODAL
+========================================================= */
+
+function openAchievements() {
+
+  const data =
+    getData();
+
+  const level =
+    levelInfo(
+      data.xp
+    );
+
+
+  const state = {
+
+    ...data,
+
+    level:
+      level.level
+
+  };
+
+
+  const html = `
+
+    <span class="panel-label">
+      COLLECTION
+    </span>
+
+    <h2>
+      🏆 BAŞARIMLAR
+    </h2>
+
+    ${ACHIEVEMENTS.map(
+      achievement => {
+
+        const unlocked =
+          achievement.check(
+            state
+          );
+
+
+        return `
+
+          <div
+            class="achievement
+            ${
+              unlocked
+                ? "unlocked"
+                : ""
+            }"
+          >
+
+            <div
+              class="achievement-icon"
+            >
+              ${achievement.icon}
+            </div>
+
+            <div>
+
+              <h3>
+                ${achievement.title}
+              </h3>
+
+              <p>
+                ${achievement.desc}
+              </p>
+
+            </div>
+
+            <span
+              class="achievement-state"
+            >
+              ${
+                unlocked
+                  ? "AÇILDI"
+                  : "KİLİTLİ"
+              }
+            </span>
+
+          </div>
+
+        `;
+
+      }
+    ).join("")}
+
+  `;
+
+
+  openModal(
+    html
+  );
+
+}
+
+
+/* =========================================================
+   SETTINGS
+========================================================= */
+
+function openSettings() {
+
+  const data =
+    getData();
+
+
+  const html = `
+
+    <span class="panel-label">
+      SYSTEM
+    </span>
+
+    <h2>
+      ⚙ AYARLAR
+    </h2>
+
+
+    <div class="setting-row">
+
+      <span>
+        Ses efektleri
+      </span>
+
+      <button
+        class="toggle"
+        onclick="
+          toggleSetting('sound')
+        "
+      >
+        ${
+          data.settings.sound
+            ? "AÇIK"
+            : "KAPALI"
+        }
+      </button>
+
+    </div>
+
+
+    <div class="setting-row">
+
+      <span>
+        Titreşim
+      </span>
+
+      <button
+        class="toggle"
+        onclick="
+          toggleSetting('vibration')
+        "
+      >
+        ${
+          data.settings.vibration
+            ? "AÇIK"
+            : "KAPALI"
+        }
+      </button>
+
+    </div>
+
+
+    <div class="setting-row">
+
+      <span>
+        Particle efektleri
+      </span>
+
+      <button
+        class="toggle"
+        onclick="
+          toggleSetting('particles')
+        "
+      >
+        ${
+          data.settings.particles
+            ? "AÇIK"
+            : "KAPALI"
+        }
+      </button>
+
+    </div>
+
+
+    <button
+      class="btn danger"
+      onclick="resetProgress()"
+    >
+      TÜM İLERLEMEYİ SIFIRLA
+    </button>
+
+  `;
+
+
+  openModal(
+    html
+  );
+
+}
+
+
+/* =========================================================
+   SETTINGS TOGGLE
+========================================================= */
+
+function toggleSetting(
+  key
+) {
+
+  const data =
+    getData();
+
+
+  data.settings[key] =
+    !data.settings[key];
+
+
+  saveData(data);
+
+
+  openSettings();
+
+}
+
+
+/* =========================================================
+   RESET
+========================================================= */
+
+function resetProgress() {
+
+  const confirmed =
+    confirm(
+      "Tüm skorlar, XP ve başarımlar silinsin mi?"
+    );
+
+
+  if (!confirmed) {
+    return;
+  }
+
+
+  localStorage.removeItem(
+    "cosmicData"
+  );
+
+
+  [
+    "evasion",
+    "scroller",
+    "jumper"
+
+  ].forEach(game => {
+
+    localStorage.removeItem(
+      "high_" + game
+    );
+
   });
 
-  gameLoopId = requestAnimationFrame(loopJumper);
+
+  closeModal();
+
+  updateMenu();
+
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  updateHighScoreBadges();
-});
+
+/* =========================================================
+   MODAL DIŞINA TIKLAMA
+========================================================= */
+
+document
+  .getElementById("modal")
+  .addEventListener(
+    "click",
+    event => {
+
+      if (
+        event.target.id ===
+        "modal"
+      ) {
+
+        closeModal();
+
+      }
+
+    }
+  );
+
+
+/* =========================================================
+   BAŞLANGIÇ
+========================================================= */
+
+updateMenu();
