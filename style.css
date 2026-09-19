@@ -4,6 +4,8 @@
   box-sizing: border-box;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 body {
@@ -23,6 +25,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 20px;
 }
 
 .screen.active {
@@ -30,81 +33,86 @@ body {
 }
 
 .logo {
-  font-size: 3rem;
+  font-size: 2.5rem;
   color: #66fcf1;
   text-shadow: 0 0 15px #66fcf1;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   letter-spacing: 2px;
 }
 
 .subtitle {
   color: #c5c6c7;
-  margin-bottom: 30px;
+  margin-bottom: 25px;
+  font-size: 0.95rem;
 }
 
 .cards-container {
   display: flex;
-  gap: 20px;
+  gap: 15px;
   flex-wrap: wrap;
   justify-content: center;
   max-width: 900px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .card {
   background: #1f2833;
   border: 2px solid #45a29e;
   border-radius: 12px;
-  padding: 25px;
-  width: 250px;
+  padding: 20px;
+  width: 240px;
   text-align: center;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-5px);
   box-shadow: 0 0 20px #66fcf1;
 }
 
 .card-icon {
-  font-size: 3rem;
-  margin-bottom: 15px;
-}
-
-.card h2 {
-  font-size: 1.4rem;
-  color: #66fcf1;
+  font-size: 2.8rem;
   margin-bottom: 10px;
 }
 
+.card h2 {
+  font-size: 1.3rem;
+  color: #66fcf1;
+  margin-bottom: 8px;
+}
+
 .card p {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #c5c6c7;
-  margin-bottom: 20px;
-  height: 40px;
+  margin-bottom: 15px;
+}
+
+.high-score-badge {
+  font-size: 0.8rem;
+  color: #ffb340;
+  margin-bottom: 10px;
+  font-weight: bold;
 }
 
 .btn {
   background: #66fcf1;
   color: #0b0c10;
   border: none;
-  padding: 10px 20px;
+  padding: 10px 18px;
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
   transition: background 0.2s;
 }
 
-.btn:hover {
-  background: #45a29e;
-}
-
-.btn.secondary {
-  background: transparent;
-  color: #c5c6c7;
-  border: 1px solid #c5c6c7;
-  margin-left: 10px;
-}
+.btn:hover { background: #45a29e; }
+.btn.secondary { background: transparent; color: #c5c6c7; border: 1px solid #c5c6c7; margin-left: 8px; }
 
 /* OYUN EKRANI */
 .game-header {
@@ -119,48 +127,42 @@ body {
 }
 
 .back-btn {
-  background: transparent;
+  background: rgba(31, 40, 51, 0.8);
   border: 1px solid #66fcf1;
   color: #66fcf1;
-  padding: 8px 15px;
-  border-radius: 5px;
+  padding: 8px 14px;
+  border-radius: 6px;
   cursor: pointer;
-}
-
-.score-board {
-  font-size: 1.5rem;
-  color: #66fcf1;
   font-weight: bold;
 }
 
+.score-board {
+  font-size: 1.2rem;
+  color: #66fcf1;
+  font-weight: bold;
+  text-shadow: 0 0 10px #66fcf1;
+}
+
 canvas {
-  background: #121212;
+  background: #0d1117;
   border: 2px solid #1f2833;
-  border-radius: 8px;
-  box-shadow: 0 0 30px rgba(102, 252, 241, 0.2);
+  border-radius: 10px;
+  box-shadow: 0 0 25px rgba(102, 252, 241, 0.15);
+  max-width: 100%;
+  max-height: 75vh;
 }
 
 .overlay {
   position: absolute;
-  background: rgba(11, 12, 16, 0.9);
-  padding: 40px;
-  border-radius: 12px;
+  background: rgba(11, 12, 16, 0.95);
+  padding: 30px;
+  border-radius: 14px;
   border: 2px solid #66fcf1;
   text-align: center;
   z-index: 20;
+  box-shadow: 0 0 30px rgba(102, 252, 241, 0.3);
 }
 
-.overlay.hidden {
-  display: none;
-}
-
-.overlay h2 {
-  font-size: 2rem;
-  color: #ff0055;
-  margin-bottom: 10px;
-}
-
-.overlay p {
-  font-size: 1.2rem;
-  margin-bottom: 20px;
-}
+.overlay.hidden { display: none; }
+.overlay h2 { font-size: 2rem; color: #ff0055; margin-bottom: 10px; }
+.overlay p { font-size: 1.1rem; margin-bottom: 20px; color: #c5c6c7; }
