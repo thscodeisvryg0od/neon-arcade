@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>NEON ARCADE HUB</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -17,21 +17,24 @@
       <div class="card" onclick="launchGame('evasion')">
         <div class="card-icon">⚡</div>
         <h2>Cyber-Evasion</h2>
-        <p>Lazerlerden ve engellerden kaç, hayatta kal!</p>
+        <p>Lazerlerden ve engellerden kaç, kalkanı yakala!</p>
+        <div id="high-evasion" class="high-score-badge">En Yüksek: 0</div>
         <button class="btn">Oyna</button>
       </div>
 
       <div class="card" onclick="launchGame('scroller')">
         <div class="card-icon">🚀</div>
         <h2>Space Collector</h2>
-        <p>Engellerin arasından süzül, kristalleri topla!</p>
+        <p>Kristalleri toplayarak enerjini doldur, engellerden kaç!</p>
+        <div id="high-scroller" class="high-score-badge">En Yüksek: 0</div>
         <button class="btn">Oyna</button>
       </div>
 
       <div class="card" onclick="launchGame('jumper')">
         <div class="card-icon">🌀</div>
         <h2>Precision Jumper</h2>
-        <p>Doğru zamanda zıpla, platformda kal!</p>
+        <p>Platformda dön ve doğru zamanda engellerin üzerinden zıpla!</p>
+        <div id="high-jumper" class="high-score-badge">En Yüksek: 0</div>
         <button class="btn">Oyna</button>
       </div>
     </div>
@@ -40,7 +43,7 @@
   <!-- OYUN EKRANI -->
   <div id="game-screen" class="screen">
     <div class="game-header">
-      <button class="back-btn" onclick="showMenu()">← Menüye Dön</button>
+      <button class="back-btn" onclick="showMenu()">← Menü</button>
       <div class="score-board">Skor: <span id="score">0</span></div>
     </div>
 
