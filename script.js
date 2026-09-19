@@ -1,52 +1,94 @@
+// ── UZAY ARKA PLAN ANİMASYONU ──
+const bgCanvas = document.getElementById('spaceBg');
+const bgCtx = bgCanvas.getContext('2d');
+let stars = [];
+
+function resizeBg() {
+  bgCanvas.width = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+  stars = [];
+  for (let i = 0; i < 120; i++) {
+    stars.push({
+      x: Math.random() * bgCanvas.width,
+      y: Math.random() * bgCanvas.height,
+      size: Math.random() * 2,
+      speed: Math.random() * 0.5 + 0.1
+    });
+  }
+}
+window.addEventListener('resize', resizeBg);
+resizeBg();
+
+function animateBg() {
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  bgCtx.fillStyle = '#ffffff';
+  stars.forEach(s => {
+    s.y += s.speed;
+    if (s.y > bgCanvas.height) s.y = 0;
+    bgCtx.globalAlpha = Math.random() * 0.5 + 0.3;
+    bgCtx.fillRect(s.x, s.y, s.size, s.size);
+  });
+  requestAnimationFrame(animateBg);
+}
+animateBg();
+
+// ── OYUN CANVAS & KONTROLLER ──
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Tuval boyut ayarları
-canvas.width = Math.min(window.innerWidth * 0.95, 800);
-canvas.height = Math.min(window.innerHeight * 0.70, 500);
+canvas.width = Math.min(window.innerWidth * 0.92, 800);
+canvas.height = Math.min(window.innerHeight * 0.65, 500);
 
 let currentGame = null;
 let gameLoopId = null;
 let score = 0;
 let isGameOver = false;
 
-// ── SES SENTEZLEYİCİSİ (Web Audio API) ──
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
+// ── SES SENTEZLEYİCİSİ ──
 let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
 
 function playSound(type) {
-  if (!audioCtx) audioCtx = new AudioCtx();
+  if (!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.connect(gain);
   gain.connect(audioCtx.destination);
 
   if (type === 'collect') {
-    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1040, audioCtx.currentTime + 0.1);
     gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
     gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
     osc.start(); osc.stop(audioCtx.currentTime + 0.1);
   } else if (type === 'hit') {
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.2);
+    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.25);
     gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.25);
   } else if (type === 'jump') {
-    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.12);
+    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.08);
     gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.12);
+    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.08);
   }
 }
 
-// ── KONTROL MEKANİZMASI ──
+// ── DOKUNMATİK & MOUSE İŞLEYİCİSİ ──
 const input = { x: canvas.width / 2, y: canvas.height / 2, isPressed: false };
 
-function updateInput(e) {
+function handlePointer(e) {
+  initAudio();
   const rect = canvas.getBoundingClientRect();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -54,17 +96,17 @@ function updateInput(e) {
   input.y = clientY - rect.top;
 }
 
-canvas.addEventListener('mousemove', updateInput);
-canvas.addEventListener('touchmove', (e) => { updateInput(e); e.preventDefault(); }, { passive: false });
-canvas.addEventListener('mousedown', () => { input.isPressed = true; if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); });
+canvas.addEventListener('mousemove', handlePointer);
+canvas.addEventListener('touchmove', (e) => { handlePointer(e); }, { passive: true });
+canvas.addEventListener('mousedown', (e) => { input.isPressed = true; handlePointer(e); });
 canvas.addEventListener('mouseup', () => input.isPressed = false);
-canvas.addEventListener('touchstart', (e) => { input.isPressed = true; updateInput(e); if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); });
+canvas.addEventListener('touchstart', (e) => { input.isPressed = true; handlePointer(e); }, { passive: true });
 canvas.addEventListener('touchend', () => input.isPressed = false);
 
-// ── SKOR VE MENÜ KONTROLLERİ ──
-function getHighScore(game) { return localStorage.getItem(`high_${game}`) || 0; }
-function setHighScore(game, val) {
-  if (val > getHighScore(game)) localStorage.setItem(`high_${game}`, Math.floor(val));
+// ── SKOR HESAPLAMA & MENÜ ──
+function getHighScore(g) { return localStorage.getItem(`high_${g}`) || 0; }
+function setHighScore(g, val) {
+  if (val > getHighScore(g)) localStorage.setItem(`high_${g}`, Math.floor(val));
 }
 
 function updateHighScoreBadges() {
@@ -82,10 +124,11 @@ function showMenu() {
   updateHighScoreBadges();
 }
 
-function launchGame(gameType) {
+function launchGame(g) {
+  initAudio();
   document.getElementById('main-menu').classList.remove('active');
   document.getElementById('game-screen').classList.add('active');
-  currentGame = gameType;
+  currentGame = g;
   restartCurrentGame();
 }
 
@@ -115,15 +158,12 @@ function triggerGameOver() {
 }
 
 /* ===================================================
-   OYUN 1: CYBER-EVASION (Gelişmiş Düşmanlar + Kalkan)
+   1. CYBER-EVASION (Top-Down Dodge)
    =================================================== */
 let player, hazards, powerups, shieldActive;
-
 function initEvasion() {
   player = { x: canvas.width / 2, y: canvas.height / 2, radius: 14 };
-  hazards = [];
-  powerups = [];
-  shieldActive = false;
+  hazards = []; powerups = []; shieldActive = false;
   loopEvasion();
 }
 
@@ -131,70 +171,46 @@ function loopEvasion() {
   if (isGameOver) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Oyuncu Hareketi
-  player.x += (input.x - player.x) * 0.12;
-  player.y += (input.y - player.y) * 0.12;
+  player.x += (input.x - player.x) * 0.15;
+  player.y += (input.y - player.y) * 0.15;
 
-  // Oyuncu Çizimi & Kalkan Efekti
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-  ctx.fillStyle = shieldActive ? '#ffb340' : '#66fcf1';
-  ctx.shadowBlur = 15;
-  ctx.shadowColor = ctx.fillStyle;
-  ctx.fill();
-  ctx.shadowBlur = 0;
+  ctx.fillStyle = shieldActive ? '#ffb703' : '#00f2fe';
+  ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle;
+  ctx.fill(); ctx.shadowBlur = 0;
 
-  // Güçlendirme (Kalkan) Üretimi
-  if (Math.random() < 0.003 && powerups.length === 0) {
+  if (Math.random() < 0.004 && powerups.length === 0) {
     powerups.push({ x: Math.random() * (canvas.width - 40) + 20, y: -10, radius: 10 });
   }
 
   for (let i = powerups.length - 1; i >= 0; i--) {
-    let p = powerups[i];
-    p.y += 2;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffb340';
-    ctx.fill();
+    let p = powerups[i]; p.y += 2;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffb703'; ctx.fill();
 
     if (Math.hypot(player.x - p.x, player.y - p.y) < player.radius + p.radius) {
-      shieldActive = true;
-      playSound('collect');
-      powerups.splice(i, 1);
-      setTimeout(() => { shieldActive = false; }, 5000);
+      shieldActive = true; playSound('collect'); powerups.splice(i, 1);
+      setTimeout(() => { shieldActive = false; }, 4000);
     }
   }
 
-  // Düşman Üretimi
-  if (Math.random() < 0.09) {
+  if (Math.random() < 0.08) {
     hazards.push({
-      x: Math.random() * canvas.width,
-      y: -10,
-      radius: Math.random() * 12 + 8,
-      speed: Math.random() * 3 + 2.5 + (score * 0.01)
+      x: Math.random() * canvas.width, y: -10,
+      radius: Math.random() * 10 + 8, speed: Math.random() * 3 + 2.5
     });
   }
 
   for (let i = hazards.length - 1; i >= 0; i--) {
-    let h = hazards[i];
-    h.y += h.speed;
-
-    ctx.beginPath();
-    ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#ff0055';
-    ctx.fill();
+    let h = hazards[i]; h.y += h.speed;
+    ctx.beginPath(); ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff0055'; ctx.fill();
 
     if (Math.hypot(player.x - h.x, player.y - h.y) < player.radius + h.radius) {
-      if (shieldActive) {
-        shieldActive = false;
-        playSound('hit');
-        hazards.splice(i, 1);
-      } else {
-        triggerGameOver();
-        return;
-      }
+      if (shieldActive) { shieldActive = false; playSound('hit'); hazards.splice(i, 1); }
+      else { triggerGameOver(); return; }
     }
-
     if (h.y > canvas.height + 20) hazards.splice(i, 1);
   }
 
@@ -203,15 +219,12 @@ function loopEvasion() {
 }
 
 /* ===================================================
-   OYUN 2: SPACE COLLECTOR (Enerji Barı + Kristalleri Topla)
+   2. SPACE COLLECTOR (2D Side-Scroller Roket)
    =================================================== */
 let ship, crystals, obstacles, energy;
-
 function initScroller() {
-  ship = { x: 80, y: canvas.height / 2, vy: 0, size: 14 };
-  crystals = [];
-  obstacles = [];
-  energy = 100;
+  ship = { x: 70, y: canvas.height / 2, vy: 0, size: 14 };
+  crystals = []; obstacles = []; energy = 100;
   loopScroller();
 }
 
@@ -219,69 +232,49 @@ function loopScroller() {
   if (isGameOver) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // İtme & Enerji Azalması
-  if (input.isPressed) {
-    ship.vy -= 0.55;
-    energy -= 0.15;
-    playSound('jump');
-  } else {
-    ship.vy += 0.35;
-  }
+  if (input.isPressed) { ship.vy -= 0.5; energy -= 0.12; } 
+  else { ship.vy += 0.35; }
 
-  ship.vy *= 0.96;
-  ship.y += ship.vy;
+  ship.vy *= 0.96; ship.y += ship.vy;
 
   if (ship.y < 0 || ship.y > canvas.height || energy <= 0) {
-    triggerGameOver();
-    return;
+    triggerGameOver(); return;
   }
 
-  // Gemi Çizimi
-  ctx.fillStyle = '#45a29e';
-  ctx.beginPath();
-  ctx.arc(ship.x, ship.y, ship.size, 0, Math.PI * 2);
-  ctx.fill();
+  // Roket Çizimi
+  ctx.fillStyle = '#4facfe'; ctx.beginPath();
+  ctx.arc(ship.x, ship.y, ship.size, 0, Math.PI * 2); ctx.fill();
 
-  // Enerji Barı Çizimi
-  ctx.fillStyle = '#1f2833';
-  ctx.fillRect(20, 20, 150, 12);
-  ctx.fillStyle = energy > 30 ? '#66fcf1' : '#ff0055';
-  ctx.fillRect(20, 20, (energy / 100) * 150, 12);
+  // Enerji Göstergesi
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(15, 15, 120, 10);
+  ctx.fillStyle = energy > 30 ? '#00f2fe' : '#ff0055';
+  ctx.fillRect(15, 15, (energy / 100) * 120, 10);
 
-  // Kristal üretimi
-  if (Math.random() < 0.035) {
-    crystals.push({ x: canvas.width + 20, y: Math.random() * (canvas.height - 60) + 30 });
+  if (Math.random() < 0.03) {
+    crystals.push({ x: canvas.width + 20, y: Math.random() * (canvas.height - 40) + 20 });
   }
 
   for (let i = crystals.length - 1; i >= 0; i--) {
-    let c = crystals[i];
-    c.x -= 3.5;
-    ctx.fillStyle = '#66fcf1';
-    ctx.fillRect(c.x, c.y, 12, 12);
+    let c = crystals[i]; c.x -= 3;
+    ctx.fillStyle = '#00f2fe'; ctx.fillRect(c.x, c.y, 10, 10);
 
-    if (Math.hypot(ship.x - c.x, ship.y - c.y) < ship.size + 12) {
-      crystals.splice(i, 1);
-      energy = Math.min(100, energy + 20);
-      playSound('collect');
-      updateScore(score + 15);
+    if (Math.hypot(ship.x - c.x, ship.y - c.y) < ship.size + 10) {
+      crystals.splice(i, 1); energy = Math.min(100, energy + 25);
+      playSound('collect'); updateScore(score + 15);
     } else if (c.x < -20) crystals.splice(i, 1);
   }
 
-  // Engeller
   if (Math.random() < 0.02) {
-    obstacles.push({ x: canvas.width + 20, y: Math.random() * (canvas.height - 80), w: 22, h: 70 });
+    obstacles.push({ x: canvas.width + 20, y: Math.random() * (canvas.height - 70), w: 20, h: 65 });
   }
 
   for (let i = obstacles.length - 1; i >= 0; i--) {
-    let o = obstacles[i];
-    o.x -= 3.5;
-    ctx.fillStyle = '#ff0055';
-    ctx.fillRect(o.x, o.y, o.w, o.h);
+    let o = obstacles[i]; o.x -= 3;
+    ctx.fillStyle = '#ff0055'; ctx.fillRect(o.x, o.y, o.w, o.h);
 
     if (ship.x + ship.size > o.x && ship.x - ship.size < o.x + o.w &&
         ship.y + ship.size > o.y && ship.y - ship.size < o.y + o.h) {
-      triggerGameOver();
-      return;
+      triggerGameOver(); return;
     }
     if (o.x < -30) obstacles.splice(i, 1);
   }
@@ -290,15 +283,15 @@ function loopScroller() {
 }
 
 /* ===================================================
-   OYUN 3: PRECISION JUMPER (Zamanlama & Platform Zıplama)
+   3. PRECISION JUMPER (Halka Etrafında Dönme & Zıplama)
    =================================================== */
-let angle, jumperPlayer, center, hazardAngles;
-
+let angle, jumperPlayer, center, hazardAngles, lastJumpState;
 function initJumper() {
-  center = { x: canvas.width / 2, y: canvas.height / 2, r: 85 };
+  center = { x: canvas.width / 2, y: canvas.height / 2, r: 80 };
   angle = 0;
   jumperPlayer = { r: center.r, size: 10, jumping: false, jumpHeight: 0 };
   hazardAngles = [Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
+  lastJumpState = false;
   loopJumper();
 }
 
@@ -308,11 +301,13 @@ function loopJumper() {
 
   angle += 0.035;
 
-  if (input.isPressed && !jumperPlayer.jumping) {
+  // Dokunma tetikleme tespiti
+  if (input.isPressed && !lastJumpState && !jumperPlayer.jumping) {
     jumperPlayer.jumping = true;
     jumperPlayer.jumpHeight = 55;
     playSound('jump');
   }
+  lastJumpState = input.isPressed;
 
   if (jumperPlayer.jumping) {
     jumperPlayer.jumpHeight -= 2.5;
@@ -323,43 +318,33 @@ function loopJumper() {
     }
   }
 
-  // Merkez Çember
-  ctx.strokeStyle = '#45a29e';
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.arc(center.x, center.y, center.r, 0, Math.PI * 2);
-  ctx.stroke();
+  // Yörünge Çemberi
+  ctx.strokeStyle = 'rgba(0, 242, 254, 0.4)';
+  ctx.lineWidth = 4; ctx.beginPath();
+  ctx.arc(center.x, center.y, center.r, 0, Math.PI * 2); ctx.stroke();
 
-  // Oyuncu Pozisyonu
   let currentR = center.r + jumperPlayer.jumpHeight;
   let px = center.x + Math.cos(angle) * currentR;
   let py = center.y + Math.sin(angle) * currentR;
 
-  ctx.fillStyle = '#66fcf1';
-  ctx.beginPath();
-  ctx.arc(px, py, jumperPlayer.size, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillStyle = '#00f2fe'; ctx.beginPath();
+  ctx.arc(px, py, jumperPlayer.size, 0, Math.PI * 2); ctx.fill();
 
-  // Engeller
   hazardAngles.forEach(hAngle => {
     let hx = center.x + Math.cos(hAngle) * center.r;
     let hy = center.y + Math.sin(hAngle) * center.r;
 
-    ctx.fillStyle = '#ff0055';
-    ctx.beginPath();
-    ctx.arc(hx, hy, 12, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = '#ff0055'; ctx.beginPath();
+    ctx.arc(hx, hy, 11, 0, Math.PI * 2); ctx.fill();
 
-    if (Math.hypot(px - hx, py - hy) < jumperPlayer.size + 12) {
-      triggerGameOver();
-      return;
+    if (Math.hypot(px - hx, py - hy) < jumperPlayer.size + 11) {
+      triggerGameOver(); return;
     }
   });
 
   gameLoopId = requestAnimationFrame(loopJumper);
 }
 
-// Başlangıç Yüklemesi
 window.addEventListener('DOMContentLoaded', () => {
   updateHighScoreBadges();
 });
