@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- Arka Plan Uzay Animasyon Canvas'ı -->
   <canvas id="spaceBg"></canvas>
 
   <!-- ANA MENÜ -->
@@ -20,7 +19,6 @@
     
     <div class="cards-container">
       <div class="card" onclick="launchGame('evasion')">
-        <div class="card-glow"></div>
         <div class="card-icon">⚡</div>
         <h2>Cyber-Evasion</h2>
         <p>Lazer dalgalarından kaç, kalkan enerji kürelerini topla!</p>
@@ -29,7 +27,6 @@
       </div>
 
       <div class="card" onclick="launchGame('scroller')">
-        <div class="card-glow"></div>
         <div class="card-icon">🚀</div>
         <h2>Space Collector</h2>
         <p>Ekrana basılı tutarak yüksel, engelleri aş ve kristalleri topla!</p>
@@ -38,7 +35,6 @@
       </div>
 
       <div class="card" onclick="launchGame('jumper')">
-        <div class="card-glow"></div>
         <div class="card-icon">🌀</div>
         <h2>Precision Jumper</h2>
         <p>Halka etrafında dön, ekrana dokunarak engellerin üzerinden zıpla!</p>
@@ -55,7 +51,9 @@
       <div class="score-board">Skor: <span id="score">0</span></div>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <div class="canvas-wrapper">
+      <canvas id="gameCanvas"></canvas>
+    </div>
 
     <!-- OYUN BİTTİ OVERLAY -->
     <div id="game-over" class="overlay hidden">
