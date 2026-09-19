@@ -3,37 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>NEON ARCADE HUB</title>
+  <title>COSMIC ARCADE HUB</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+  <!-- Arka Plan Uzay Animasyon Canvas'ı -->
+  <canvas id="spaceBg"></canvas>
+
   <!-- ANA MENÜ -->
   <div id="main-menu" class="screen active">
-    <h1 class="logo">NEON ARCADE</h1>
-    <p class="subtitle">Oynamak istediğin oyunu seç:</p>
+    <div class="header-container">
+      <h1 class="logo">COSMIC ARCADE</h1>
+      <p class="subtitle">Galaktik Mini Oyun Koleksiyonu</p>
+    </div>
     
     <div class="cards-container">
       <div class="card" onclick="launchGame('evasion')">
+        <div class="card-glow"></div>
         <div class="card-icon">⚡</div>
         <h2>Cyber-Evasion</h2>
-        <p>Lazerlerden ve engellerden kaç, kalkanı yakala!</p>
+        <p>Lazer dalgalarından kaç, kalkan enerji kürelerini topla!</p>
         <div id="high-evasion" class="high-score-badge">En Yüksek: 0</div>
         <button class="btn">Oyna</button>
       </div>
 
       <div class="card" onclick="launchGame('scroller')">
+        <div class="card-glow"></div>
         <div class="card-icon">🚀</div>
         <h2>Space Collector</h2>
-        <p>Kristalleri toplayarak enerjini doldur, engellerden kaç!</p>
+        <p>Ekrana basılı tutarak yüksel, engelleri aş ve kristalleri topla!</p>
         <div id="high-scroller" class="high-score-badge">En Yüksek: 0</div>
         <button class="btn">Oyna</button>
       </div>
 
       <div class="card" onclick="launchGame('jumper')">
+        <div class="card-glow"></div>
         <div class="card-icon">🌀</div>
         <h2>Precision Jumper</h2>
-        <p>Platformda dön ve doğru zamanda engellerin üzerinden zıpla!</p>
+        <p>Halka etrafında dön, ekrana dokunarak engellerin üzerinden zıpla!</p>
         <div id="high-jumper" class="high-score-badge">En Yüksek: 0</div>
         <button class="btn">Oyna</button>
       </div>
@@ -51,10 +59,12 @@
 
     <!-- OYUN BİTTİ OVERLAY -->
     <div id="game-over" class="overlay hidden">
-      <h2>Oyun Bitti!</h2>
+      <h2>Görev Başarısız!</h2>
       <p>Skorun: <span id="final-score">0</span></p>
-      <button class="btn" onclick="restartCurrentGame()">Tekrar Dene</button>
-      <button class="btn secondary" onclick="showMenu()">Menü</button>
+      <div class="overlay-buttons">
+        <button class="btn" onclick="restartCurrentGame()">Tekrar Dene</button>
+        <button class="btn secondary" onclick="showMenu()">Menüye Dön</button>
+      </div>
     </div>
   </div>
 
