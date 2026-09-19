@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON ARCADE HUB</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ANA MENÜ -->
+  <div id="main-menu" class="screen active">
+    <h1 class="logo">NEON ARCADE</h1>
+    <p class="subtitle">Oynamak istediğin oyunu seç:</p>
+    
+    <div class="cards-container">
+      <div class="card" onclick="launchGame('evasion')">
+        <div class="card-icon">⚡</div>
+        <h2>Cyber-Evasion</h2>
+        <p>Lazerlerden ve engellerden kaç, hayatta kal!</p>
+        <button class="btn">Oyna</button>
+      </div>
+
+      <div class="card" onclick="launchGame('scroller')">
+        <div class="card-icon">🚀</div>
+        <h2>Space Collector</h2>
+        <p>Engellerin arasından süzül, kristalleri topla!</p>
+        <button class="btn">Oyna</button>
+      </div>
+
+      <div class="card" onclick="launchGame('jumper')">
+        <div class="card-icon">🌀</div>
+        <h2>Precision Jumper</h2>
+        <p>Doğru zamanda zıpla, platformda kal!</p>
+        <button class="btn">Oyna</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OYUN EKRANI -->
+  <div id="game-screen" class="screen">
+    <div class="game-header">
+      <button class="back-btn" onclick="showMenu()">← Menüye Dön</button>
+      <div class="score-board">Skor: <span id="score">0</span></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- OYUN BİTTİ OVERLAY -->
+    <div id="game-over" class="overlay hidden">
+      <h2>Oyun Bitti!</h2>
+      <p>Skorun: <span id="final-score">0</span></p>
+      <button class="btn" onclick="restartCurrentGame()">Tekrar Dene</button>
+      <button class="btn secondary" onclick="showMenu()">Menü</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
