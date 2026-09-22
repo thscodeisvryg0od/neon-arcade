@@ -1,6 +1,109 @@
 /* =========================================================
-   COSMIC ARCADE — 10 GAME EDITION
+   COSMIC ARCADE — 10 GAME EDITION v3.0
    ========================================================= */
+
+/* =========================================================
+   PWA - SERVICE WORKER
+========================================================= */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+
+/* =========================================================
+   ANIMATED LOADING SCREEN
+========================================================= */
+const LOADING_STEPS = [
+  "Yıldız haritası çiziliyor...",
+  "Nebula bulutları oluşturuluyor...",
+  "Oyun motoru başlatılıyor...",
+  "Ses sistemi kalibre ediliyor...",
+  "Arcade hazır!"
+];
+
+function runLoadingScreen() {
+  const loader = document.getElementById("loader");
+  const fill = document.getElementById("loader-fill");
+  const status = document.getElementById("loader-status");
+  const particleBox = document.getElementById("loader-particles");
+
+  // Loader yoksa direkt menüye geç (fallback)
+  if (!loader) {
+    document.getElementById("main-menu").classList.add("active");
+    updateMenu();
+    return;
+  }
+
+  // Floating particles
+  const particleInterval = setInterval(() => {
+    if (!particleBox) return;
+    const s = document.createElement("span");
+    s.style.left = Math.random() * 100 + "%";
+    s.style.top = "100%";
+    s.style.animationDuration = (2 + Math.random() * 2) + "s";
+    s.style.background = ["#00f2fe", "#9b6cff", "#ff0055", "#ffb703"][
+      Math.floor(Math.random() * 4)
+    ];
+    s.style.boxShadow = `0 0 10px ${s.style.background}`;
+    particleBox.appendChild(s);
+    setTimeout(() => s.remove(), 4000);
+  }, 180);
+
+  let progress = 0;
+  let stepIndex = 0;
+
+  const tick = () => {
+    progress += progress < 70 ? 8 + Math.random() * 12 : 4 + Math.random() * 8;
+    if (progress > 100) progress = 100;
+
+    if (fill) fill.style.width = progress + "%";
+
+    const newStep = Math.min(
+      LOADING_STEPS.length - 1,
+      Math.floor((progress / 100) * LOADING_STEPS.length)
+    );
+
+    if (newStep !== stepIndex && status) {
+      stepIndex = newStep;
+      status.textContent = LOADING_STEPS[stepIndex];
+      status.style.animation = "none";
+      void status.offsetWidth;
+      status.style.animation = "statusFade 0.6s ease";
+    }
+
+    if (progress < 100) {
+      setTimeout(tick, 120 + Math.random() * 140);
+    } else {
+      clearInterval(particleInterval);
+      setTimeout(() => {
+        loader.classList.add("hide");
+        document.getElementById("main-menu").classList.add("active");
+        updateMenu();
+      }, 550);
+    }
+  };
+
+  setTimeout(tick, 250);
+}
+
+/* =========================================================
+   PER-GAME SOUND PROFILES
+========================================================= */
+const SOUND_PROFILES = {
+  evasion:   { base: 880, collect: 1200, hit: 180, wave: "square"   },
+  scroller:  { base: 440, collect:  880, hit: 120, wave: "sine"     },
+  jumper:    { base: 660, collect:  990, hit: 200, wave: "triangle" },
+  snake:     { base: 520, collect:  780, hit: 140, wave: "square"   },
+  breaker:   { base: 400, collect:  700, hit: 220, wave: "triangle" },
+  flap:      { base: 600, collect:  900, hit: 160, wave: "sine"     },
+  pong:      { base: 500, collect:  750, hit: 200, wave: "square"   },
+  reflex:    { base: 720, collect: 1080, hit: 240, wave: "sawtooth" },
+  memory:    { base: 480, collect:  840, hit: 180, wave: "sine"     },
+  sync:      { base: 340, collect:  680, hit: 150, wave: "triangle" }
+};
+
+const MEMORY_TONES = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
 
 /* ---------- SPACE BACKGROUND ---------- */
 const bgCanvas = document.getElementById("spaceBg");
@@ -266,6 +369,104 @@ function playSound(type) {
   } catch (e) {}
 }
 
+/* ---------- PER-GAME SOUND ---------- */
+function playSoundFor(game, type) {
+  if (!getData().settings.sound || !audioCtx) return;
+  const profile = SOUND_PROFILES[game] || SOUND_PROFILES.evasion;
+
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+
+    osc.type = profile.wave;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    let freq, dur, vol;
+
+    if (type === "collect") {
+      freq = profile.collect; dur = 0.11; vol = 0.16;
+      osc.frequency.setValueAtTime(freq * 0.7, now);
+      osc.frequency.exponentialRampToValueAtTime(freq, now + dur);
+    } else if (type === "hit") {
+      freq = profile.hit; dur = 0.25; vol = 0.22;
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + dur);
+    } else if (type === "score") {
+      freq = profile.base; dur = 0.09; vol = 0.13;
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + dur);
+    } else {
+      freq = profile.base; dur = 0.08; vol = 0.12;
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.8, now + dur);
+    }
+
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    osc.start(now); osc.stop(now + dur);
+  } catch (e) {}
+}
+
+/* Global playSound'u per-game'e yönlendir */
+const _origPlaySound = playSound;
+playSound = function (type) {
+  if (typeof currentGame !== "undefined" && currentGame) {
+    return playSoundFor(currentGame, type);
+  }
+  return _origPlaySound(type);
+};
+
+/* ---------- MEMORY TONES ---------- */
+function playMemoryTone(idx) {
+  if (!getData().settings.sound || !audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    osc.type = "sine";
+    osc.frequency.value = MEMORY_TONES[idx] || 523.25;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc.start(now); osc.stop(now + 0.35);
+  } catch (e) {}
+}
+
+/* ---------- AMBIENT ---------- */
+let ambientOsc = null, ambientGain = null;
+
+function startAmbient(game) {
+  if (!getData().settings.sound || !audioCtx) return;
+  stopAmbient();
+  try {
+    const profile = SOUND_PROFILES[game];
+    if (!profile) return;
+    ambientOsc = audioCtx.createOscillator();
+    ambientGain = audioCtx.createGain();
+    ambientOsc.type = "sine";
+    ambientOsc.frequency.value = profile.base / 4;
+    ambientOsc.connect(ambientGain);
+    ambientGain.connect(audioCtx.destination);
+    ambientGain.gain.setValueAtTime(0.018, audioCtx.currentTime);
+    ambientOsc.start();
+  } catch (e) {}
+}
+
+function stopAmbient() {
+  if (ambientOsc) {
+    try { ambientOsc.stop(); ambientOsc.disconnect(); } catch (e) {}
+    ambientOsc = null;
+  }
+  if (ambientGain) {
+    try { ambientGain.disconnect(); } catch (e) {}
+    ambientGain = null;
+  }
+}
+
 /* ---------- VIBRATION ---------- */
 function vibrate(duration = 45) {
   if (getData().settings.vibration && navigator.vibrate) navigator.vibrate(duration);
@@ -385,6 +586,7 @@ function cancelGame() {
 
 function showMenu() {
   cancelGame();
+  stopAmbient();           // 🔥 NEW
   onSwipe = null; onCanvasTap = null;
   document.getElementById("main-menu").classList.add("active");
   document.getElementById("game-screen").classList.remove("active");
@@ -413,6 +615,8 @@ function launchGame(game) {
   };
 
   document.getElementById("control-hint").textContent = hints[game] || "Dokun";
+
+  startAmbient(game);      // 🔥 NEW
   restartCurrentGame();
 }
 
@@ -444,6 +648,7 @@ function triggerGameOver(detail = "") {
   if (isGameOver) return;
   isGameOver = true;
 
+  stopAmbient();           // 🔥 NEW
   playSound("hit");
   vibrate(120);
 
@@ -460,7 +665,6 @@ function triggerGameOver(detail = "") {
   document.getElementById("game-over").classList.remove("hidden");
   updateMenu();
 
-  // shake effect
   document.getElementById("game-screen").classList.remove("shake");
   void document.getElementById("game-screen").offsetWidth;
   document.getElementById("game-screen").classList.add("shake");
@@ -927,7 +1131,6 @@ function loopBreaker(timestamp) {
   ctx.fillStyle = "rgba(5,9,19,.96)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // paddle follows pointer x (clamped)
   const targetX = Math.max(bPaddle.w / 2, Math.min(canvas.width - bPaddle.w / 2, input.x));
   bPaddle.x += (targetX - bPaddle.x) * Math.min(1, 20 * dt);
 
@@ -946,7 +1149,6 @@ function loopBreaker(timestamp) {
     if (bBall.x > canvas.width - bBall.r) { bBall.x = canvas.width - bBall.r; bBall.vx *= -1; playSound("score"); }
     if (bBall.y < bBall.r) { bBall.y = bBall.r; bBall.vy *= -1; playSound("score"); }
 
-    // paddle collision
     if (bBall.y + bBall.r > bPaddle.y && bBall.y - bBall.r < bPaddle.y + bPaddle.h &&
         bBall.x > bPaddle.x - bPaddle.w / 2 && bBall.x < bPaddle.x + bPaddle.w / 2 &&
         bBall.vy > 0) {
@@ -961,7 +1163,6 @@ function loopBreaker(timestamp) {
       return;
     }
 
-    // bricks
     for (let i = 0; i < bBricks.length; i++) {
       const br = bBricks[i];
       if (!br.alive) continue;
@@ -982,7 +1183,6 @@ function loopBreaker(timestamp) {
 
     const remaining = bBricks.filter(b => b.alive).length;
     if (remaining === 0) {
-      // next level
       initBreaker();
       return;
     }
@@ -991,7 +1191,6 @@ function loopBreaker(timestamp) {
     document.getElementById("game-stat-right").textContent = `KALAN ${remaining}`;
   }
 
-  // draw bricks
   for (const br of bBricks) {
     if (!br.alive) continue;
     ctx.fillStyle = `hsl(${br.hue},100%,60%)`;
@@ -1001,14 +1200,12 @@ function loopBreaker(timestamp) {
   }
   ctx.shadowBlur = 0;
 
-  // draw paddle
   ctx.fillStyle = "#00f2fe";
   ctx.shadowBlur = 15; ctx.shadowColor = "#00f2fe";
   roundRect(bPaddle.x - bPaddle.w / 2, bPaddle.y, bPaddle.w, bPaddle.h, 5);
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  // draw ball
   ctx.fillStyle = "#ffffff";
   ctx.shadowBlur = 18; ctx.shadowColor = "#00f2fe";
   ctx.beginPath(); ctx.arc(bBall.x, bBall.y, bBall.r, 0, Math.PI * 2); ctx.fill();
@@ -1046,7 +1243,6 @@ function loopFlap(timestamp) {
   ctx.fillStyle = "rgba(5,9,19,.96)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // physics
   flapBird.vy += 900 * dt;
   flapBird.y += flapBird.vy * dt;
   flapBird.rot = Math.max(-0.5, Math.min(1.2, flapBird.vy / 700));
@@ -1057,7 +1253,6 @@ function loopFlap(timestamp) {
   }
   flapLastState = input.isPressed;
 
-  // pipes
   flapTimer += dt;
   if (flapTimer > 1.5) {
     flapTimer = 0;
@@ -1085,7 +1280,6 @@ function loopFlap(timestamp) {
     roundRect(p.x, p.bottom, p.w, canvas.height - p.bottom, 6); ctx.fill();
     ctx.shadowBlur = 0;
 
-    // collision
     if (flapBird.x + flapBird.r > p.x && flapBird.x - flapBird.r < p.x + p.w) {
       if (flapBird.y - flapBird.r < p.top || flapBird.y + flapBird.r > p.bottom) {
         triggerGameOver(`Skor ${Math.floor(score)} • ×${combo}`);
@@ -1110,7 +1304,6 @@ function loopFlap(timestamp) {
     return;
   }
 
-  // draw bird
   ctx.save();
   ctx.translate(flapBird.x, flapBird.y);
   ctx.rotate(flapBird.rot);
@@ -1119,7 +1312,6 @@ function loopFlap(timestamp) {
   ctx.beginPath();
   ctx.arc(0, 0, flapBird.r, 0, Math.PI * 2);
   ctx.fill();
-  // eye
   ctx.fillStyle = "#05050d";
   ctx.beginPath(); ctx.arc(4, -3, 2.5, 0, Math.PI * 2); ctx.fill();
   ctx.shadowBlur = 0;
@@ -1162,7 +1354,6 @@ function loopPong(timestamp) {
   ctx.fillStyle = "rgba(5,9,19,.96)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // center line
   ctx.strokeStyle = "rgba(0,242,254,.15)";
   ctx.setLineDash([8, 10]);
   ctx.beginPath();
@@ -1171,23 +1362,19 @@ function loopPong(timestamp) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // player paddle
   const targetY = Math.max(pPlayer.h / 2, Math.min(canvas.height - pPlayer.h / 2, input.y));
   pPlayer.y += (targetY - pPlayer.y) * Math.min(1, 20 * dt);
 
-  // AI paddle
   const aiTarget = pBall.y + (Math.random() - 0.5) * 40;
   pAI.y += (aiTarget - pAI.y) * Math.min(1, 3.2 * dt);
   pAI.y = Math.max(pAI.h / 2, Math.min(canvas.height - pAI.h / 2, pAI.y));
 
-  // ball
   pBall.x += pBall.vx * dt;
   pBall.y += pBall.vy * dt;
 
   if (pBall.y < pBall.r) { pBall.y = pBall.r; pBall.vy *= -1; playSound("score"); }
   if (pBall.y > canvas.height - pBall.r) { pBall.y = canvas.height - pBall.r; pBall.vy *= -1; playSound("score"); }
 
-  // player paddle collision
   if (pBall.vx > 0 &&
       pBall.x + pBall.r > pPlayer.x - pPlayer.w / 2 &&
       pBall.x - pBall.r < pPlayer.x + pPlayer.w / 2 &&
@@ -1205,7 +1392,6 @@ function loopPong(timestamp) {
     createParticles(pBall.x, pBall.y, "#00f2fe", 8);
   }
 
-  // AI paddle collision
   if (pBall.vx < 0 &&
       pBall.x - pBall.r < pAI.x + pAI.w / 2 &&
       pBall.x + pBall.r > pAI.x - pAI.w / 2 &&
@@ -1218,7 +1404,6 @@ function loopPong(timestamp) {
     playSound("score");
   }
 
-  // scoring
   if (pBall.x < -20) {
     pPlayerScore++;
     const gained = 30 * combo;
@@ -1235,7 +1420,6 @@ function loopPong(timestamp) {
     return;
   }
 
-  // draw paddles
   ctx.fillStyle = "#00f2fe";
   ctx.shadowBlur = 15; ctx.shadowColor = "#00f2fe";
   roundRect(pPlayer.x - pPlayer.w / 2, pPlayer.y - pPlayer.h / 2, pPlayer.w, pPlayer.h, 5);
@@ -1246,7 +1430,6 @@ function loopPong(timestamp) {
   roundRect(pAI.x - pAI.w / 2, pAI.y - pAI.h / 2, pAI.w, pAI.h, 5);
   ctx.fill();
 
-  // ball
   ctx.fillStyle = "#ffffff";
   ctx.shadowBlur = 18; ctx.shadowColor = "#00f2fe";
   ctx.beginPath(); ctx.arc(pBall.x, pBall.y, pBall.r, 0, Math.PI * 2); ctx.fill();
@@ -1302,7 +1485,6 @@ function loopReflex(timestamp) {
   ctx.fillStyle = "rgba(5,9,19,.96)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // grid background
   ctx.strokeStyle = "rgba(0,242,254,.05)";
   const cellSize = 40;
   for (let x = 0; x < canvas.width; x += cellSize) {
@@ -1333,14 +1515,12 @@ function loopReflex(timestamp) {
     const progress = reflexTimeLeft / reflexMaxTime;
     const curR = reflexTarget.r * (0.6 + progress * 0.4);
 
-    // outer ring
     ctx.strokeStyle = "rgba(0,242,254,.4)";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(reflexTarget.x, reflexTarget.y, curR + 8, 0, Math.PI * 2);
     ctx.stroke();
 
-    // progress arc
     ctx.strokeStyle = "#ff0055";
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -1348,7 +1528,6 @@ function loopReflex(timestamp) {
             -Math.PI / 2 + Math.PI * 2 * progress);
     ctx.stroke();
 
-    // target
     const grd = ctx.createRadialGradient(reflexTarget.x, reflexTarget.y, 0,
                                           reflexTarget.x, reflexTarget.y, curR);
     grd.addColorStop(0, "rgba(0,242,254,.9)");
@@ -1360,7 +1539,6 @@ function loopReflex(timestamp) {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // center
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
     ctx.arc(reflexTarget.x, reflexTarget.y, curR * 0.35, 0, Math.PI * 2);
@@ -1378,6 +1556,7 @@ function loopReflex(timestamp) {
    9. MEMORY MATRIX
 ========================================================= */
 let memState;
+let _memLastHighlight = -1;
 
 function initMemory() {
   memState = {
@@ -1390,6 +1569,7 @@ function initMemory() {
     phaseTimer: 0,
     waitingForPlayer: false
   };
+  _memLastHighlight = -1;
 
   onCanvasTap = (x, y) => {
     if (!memState.waitingForPlayer) return;
@@ -1404,7 +1584,6 @@ function initMemory() {
 }
 
 function handleMemoryInput(idx) {
-  // brief flash
   memState.highlight = idx;
   memState.flashTimer = 0.25;
 
@@ -1416,7 +1595,6 @@ function handleMemoryInput(idx) {
     createParticles(q.x + q.w / 2, q.y + q.h / 2, "#00f2fe", 8);
 
     if (memState.inputIndex >= memState.sequence.length) {
-      // complete round
       const gained = memState.sequence.length * 20 * combo;
       updateScore(score + gained);
       setCombo(combo + 1);
@@ -1456,7 +1634,6 @@ function loopMemory(timestamp) {
   ctx.fillStyle = "rgba(5,9,19,.96)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // draw quadrants
   const colors = ["#00f2fe", "#9b6cff", "#ffb703", "#ff0055"];
   for (let i = 0; i < 4; i++) {
     const q = getQuadrantRect(i);
@@ -1477,7 +1654,6 @@ function loopMemory(timestamp) {
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
 
-    // outline
     ctx.strokeStyle = c;
     ctx.globalAlpha = 0.5;
     ctx.lineWidth = 2;
@@ -1486,13 +1662,17 @@ function loopMemory(timestamp) {
     ctx.globalAlpha = 1;
   }
 
-  // flash timer
   if (memState.flashTimer > 0) {
     memState.flashTimer -= dt;
     if (memState.flashTimer <= 0) memState.highlight = -1;
   }
 
-  // state machine
+  // 🔥 Memory tones - highlight değişince tonu çal
+  if (memState.highlight !== _memLastHighlight && memState.highlight >= 0) {
+    playMemoryTone(memState.highlight);
+  }
+  _memLastHighlight = memState.highlight;
+
   if (memState.phase === "showing") {
     if (memState.flashTimer <= 0) {
       if (memState.phaseTimer > 0) {
@@ -1507,13 +1687,11 @@ function loopMemory(timestamp) {
           memState.flashTimer = 0.4;
           memState.showIndex++;
           memState.phaseTimer = 0.25;
-          playSound("score");
         }
       }
     }
   }
 
-  // progress indicator
   document.getElementById("game-stat-left").textContent =
     memState.phase === "showing" ? "İZLE" : "TEKRARLA";
   document.getElementById("game-stat-right").textContent =
@@ -1529,7 +1707,7 @@ function loopMemory(timestamp) {
 let syncMarker, syncDir, syncSpeed, syncTarget, syncTargetW, syncPulsePhase;
 
 function initSync() {
-  syncMarker = 0; // 0..1
+  syncMarker = 0;
   syncDir = 1;
   syncSpeed = 0.9;
   syncTarget = 0.5;
@@ -1544,8 +1722,7 @@ function handleSyncTap() {
   const half = syncTargetW / 2;
 
   if (dist <= half) {
-    // hit
-    const precision = 1 - dist / half; // 0..1 (1 = perfect)
+    const precision = 1 - dist / half;
     let label;
     let mult;
     if (precision > 0.85) { label = "PERFECT!"; mult = 4; }
@@ -1559,7 +1736,6 @@ function handleSyncTap() {
     showFloatingText(`${label} +${gained}`, canvas.width / 2, canvas.height / 2 - 30);
     createParticles(canvas.width / 2, canvas.height * 0.82, "#00f2fe", 20);
 
-    // next target
     syncTarget = 0.15 + Math.random() * 0.7;
     syncTargetW = Math.max(0.07, 0.22 - score / 15000);
     syncSpeed = Math.min(2.4, 0.9 + score / 4000);
@@ -1585,12 +1761,10 @@ function loopSync(timestamp) {
   const barX = 30;
   const barW = canvas.width - 60;
 
-  // track
   ctx.fillStyle = "rgba(255,255,255,.08)";
   roundRect(barX, barY, barW, barH, 7);
   ctx.fill();
 
-  // target zone
   const tStart = barX + (syncTarget - syncTargetW / 2) * barW;
   const tWidth = syncTargetW * barW;
   const grd = ctx.createLinearGradient(tStart, 0, tStart + tWidth, 0);
@@ -1603,7 +1777,6 @@ function loopSync(timestamp) {
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  // target center line
   const tCenter = barX + syncTarget * barW;
   ctx.strokeStyle = "rgba(255,255,255,.35)";
   ctx.lineWidth = 1;
@@ -1612,21 +1785,18 @@ function loopSync(timestamp) {
   ctx.lineTo(tCenter, barY + barH + 5);
   ctx.stroke();
 
-  // marker
   const markerX = barX + syncMarker * barW;
   ctx.fillStyle = "#ffb703";
   ctx.shadowBlur = 20; ctx.shadowColor = "#ffb703";
   ctx.beginPath();
   ctx.arc(markerX, barY + barH / 2, 12, 0, Math.PI * 2);
   ctx.fill();
-  // inner
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.arc(markerX, barY + barH / 2, 5, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  // pulse hint
   syncPulsePhase += dt * 6;
   ctx.fillStyle = `rgba(0,242,254,${0.5 + Math.sin(syncPulsePhase) * 0.3})`;
   ctx.font = "bold 13px sans-serif";
@@ -1720,6 +1890,17 @@ document.getElementById("modal").addEventListener("click", e => {
 });
 
 /* =========================================================
+   TOP-ACTION MOUSE TRACKING (Radial gradient follow)
+========================================================= */
+document.querySelectorAll(".top-action").forEach(btn => {
+  btn.addEventListener("pointermove", e => {
+    const r = btn.getBoundingClientRect();
+    btn.style.setProperty("--mx", ((e.clientX - r.left) / r.width * 100) + "%");
+    btn.style.setProperty("--my", ((e.clientY - r.top) / r.height * 100) + "%");
+  });
+});
+
+/* =========================================================
    BAŞLANGIÇ
 ========================================================= */
-updateMenu();
+runLoadingScreen();
