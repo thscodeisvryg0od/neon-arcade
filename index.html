@@ -2,469 +2,254 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0,
-    maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#05050d">
-
   <title>COSMIC ARCADE</title>
-
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-  <canvas id="spaceBg"></canvas>
+<canvas id="spaceBg"></canvas>
 
-  <!-- =========================
-       ANA MENÜ
-  ========================== -->
+<!-- ============= ANA MENÜ ============= -->
+<main id="main-menu" class="screen active">
 
-  <main id="main-menu" class="screen active">
+  <header class="header-container">
+    <div class="eyebrow">✦ GALACTIC GAME HUB ✦</div>
+    <h1 class="logo" data-text="COSMIC ARCADE">COSMIC ARCADE</h1>
+    <p class="subtitle">10 oyun. Sonsuz skor. Tek arcade.</p>
+  </header>
 
-    <header class="header-container">
-
-      <div class="eyebrow">
-        ✦ GALACTIC GAME HUB ✦
-      </div>
-
-      <h1 class="logo">
-        COSMIC ARCADE
-      </h1>
-
-      <p class="subtitle">
-        Kısa oyunlar. Yüksek skorlar. Sonsuz tekrar.
-      </p>
-
-    </header>
-
-
-    <!-- PLAYER PANEL -->
-
-    <section class="profile-panel">
-
-      <div class="profile-main">
-
-        <span class="panel-label">
-          PLAYER
-        </span>
-
-        <strong id="player-level">
-          LEVEL 1
-        </strong>
-
-      </div>
-
-
-      <div class="xp-wrap">
-
-        <div class="xp-meta">
-
-          <span>XP</span>
-
-          <span id="xp-text">
-            0 / 100
-          </span>
-
-        </div>
-
-        <div class="xp-bar">
-          <i id="xp-fill"></i>
-        </div>
-
-      </div>
-
-
-      <div class="profile-stat">
-
-        <span>
-          TOPLAM SKOR
-        </span>
-
-        <strong id="total-score">
-          0
-        </strong>
-
-      </div>
-
-
-      <div class="profile-stat">
-
-        <span>
-          OYUN
-        </span>
-
-        <strong id="games-played">
-          0
-        </strong>
-
-      </div>
-
-    </section>
-
-
-    <!-- MENÜ BUTONLARI -->
-
-    <div class="menu-actions">
-
-      <button
-        class="top-action"
-        onclick="openAchievements()"
-      >
-        🏆 Başarımlar
-      </button>
-
-      <button
-        class="top-action"
-        onclick="openSettings()"
-      >
-        ⚙ Ayarlar
-      </button>
-
+  <section class="profile-panel">
+    <div class="profile-main">
+      <span class="panel-label">PLAYER</span>
+      <strong id="player-level">LEVEL 1</strong>
     </div>
-
-
-    <!-- OYUN KARTLARI -->
-
-    <section class="cards-container">
-
-
-      <!-- CYBER EVASION -->
-
-      <article
-        class="card"
-        onclick="launchGame('evasion')"
-      >
-
-        <div class="card-top">
-
-          <span class="card-icon">
-            ⚡
-          </span>
-
-          <span class="tag">
-            REFLEX
-          </span>
-
-        </div>
-
-        <h2>
-          Cyber-Evasion
-        </h2>
-
-        <p>
-          Lazer dalgalarından kaç,
-          kalkanları topla ve combo'yu koru.
-        </p>
-
-        <div class="card-footer">
-
-          <span
-            id="high-evasion"
-            class="high-score-badge"
-          >
-            BEST 0
-          </span>
-
-          <button class="btn">
-            OYNA
-          </button>
-
-        </div>
-
-      </article>
-
-
-      <!-- SPACE COLLECTOR -->
-
-      <article
-        class="card"
-        onclick="launchGame('scroller')"
-      >
-
-        <div class="card-top">
-
-          <span class="card-icon">
-            🚀
-          </span>
-
-          <span class="tag">
-            ENDLESS
-          </span>
-
-        </div>
-
-        <h2>
-          Space Collector
-        </h2>
-
-        <p>
-          Gemiyi kontrol et, enerjini yönet,
-          kristalleri topla ve engelleri aş.
-        </p>
-
-        <div class="card-footer">
-
-          <span
-            id="high-scroller"
-            class="high-score-badge"
-          >
-            BEST 0
-          </span>
-
-          <button class="btn">
-            OYNA
-          </button>
-
-        </div>
-
-      </article>
-
-
-      <!-- PRECISION JUMPER -->
-
-      <article
-        class="card"
-        onclick="launchGame('jumper')"
-      >
-
-        <div class="card-top">
-
-          <span class="card-icon">
-            🌀
-          </span>
-
-          <span class="tag">
-            TIMING
-          </span>
-
-        </div>
-
-        <h2>
-          Precision Jumper
-        </h2>
-
-        <p>
-          Dönen yörüngede doğru anda zıpla.
-          Perfect zamanlamalarla bonus kazan.
-        </p>
-
-        <div class="card-footer">
-
-          <span
-            id="high-jumper"
-            class="high-score-badge"
-          >
-            BEST 0
-          </span>
-
-          <button class="btn">
-            OYNA
-          </button>
-
-        </div>
-
-      </article>
-
-    </section>
-
-
-    <!-- DAILY CHALLENGE -->
-
-    <section class="daily-card">
-
-      <div>
-
-        <span class="panel-label">
-          DAILY CHALLENGE
-        </span>
-
-        <h3>
-          Bugünün Görevi
-        </h3>
-
-        <p id="daily-text">
-          Cyber-Evasion'da 300 puana ulaş.
-        </p>
-
+    <div class="xp-wrap">
+      <div class="xp-meta">
+        <span>XP</span>
+        <span id="xp-text">0 / 100</span>
       </div>
-
-
-      <div class="daily-progress">
-
-        <strong id="daily-progress-text">
-          0 / 300
-        </strong>
-
-        <div class="xp-bar">
-
-          <i id="daily-fill"></i>
-
-        </div>
-
-      </div>
-
-    </section>
-
-  </main>
-
-
-  <!-- =========================
-       OYUN EKRANI
-  ========================== -->
-
-  <main id="game-screen" class="screen">
-
-    <div class="game-header">
-
-      <button
-        class="back-btn"
-        onclick="showMenu()"
-      >
-        ← Menü
-      </button>
-
-      <div
-        class="game-title"
-        id="game-title"
-      >
-        GAME
-      </div>
-
-      <div class="score-board">
-
-        SKOR
-
-        <span id="score">
-          0
-        </span>
-
-      </div>
-
+      <div class="xp-bar"><i id="xp-fill"></i></div>
     </div>
-
-
-    <div class="game-stats">
-
-      <span id="game-stat-left">
-        READY
-      </span>
-
-      <span
-        id="combo-label"
-        class="combo-label"
-      >
-        COMBO ×1
-      </span>
-
-      <span id="game-stat-right"></span>
-
+    <div class="profile-stat">
+      <span>TOPLAM SKOR</span>
+      <strong id="total-score">0</strong>
     </div>
-
-
-    <div class="canvas-wrapper">
-
-      <canvas id="gameCanvas"></canvas>
-
+    <div class="profile-stat">
+      <span>OYUN</span>
+      <strong id="games-played">0</strong>
     </div>
+  </section>
 
-
-    <div
-      class="control-hint"
-      id="control-hint"
-    >
-      Dokun / basılı tut
-    </div>
-
-
-    <!-- GAME OVER -->
-
-    <div
-      id="game-over"
-      class="overlay hidden"
-    >
-
-      <div class="overlay-glow">
-        ✦
-      </div>
-
-      <span class="panel-label">
-        RUN COMPLETE
-      </span>
-
-      <h2>
-        Görev Bitti
-      </h2>
-
-      <p>
-        Skorun
-      </p>
-
-      <strong
-        class="final-score"
-        id="final-score"
-      >
-        0
-      </strong>
-
-      <div
-        id="result-detail"
-        class="result-detail"
-      ></div>
-
-      <div class="overlay-buttons">
-
-        <button
-          class="btn"
-          onclick="restartCurrentGame()"
-        >
-          TEKRAR DENE
-        </button>
-
-        <button
-          class="btn secondary"
-          onclick="showMenu()"
-        >
-          MENÜYE DÖN
-        </button>
-
-      </div>
-
-    </div>
-
-  </main>
-
-
-  <!-- =========================
-       MODAL
-  ========================== -->
-
-  <div
-    id="modal"
-    class="modal hidden"
-  >
-
-    <div class="modal-card">
-
-      <button
-        class="modal-close"
-        onclick="closeModal()"
-      >
-        ×
-      </button>
-
-      <div id="modal-content"></div>
-
-    </div>
-
+  <div class="menu-actions">
+    <button class="top-action" onclick="openAchievements()">🏆 Başarımlar</button>
+    <button class="top-action" onclick="openSettings()">⚙ Ayarlar</button>
   </div>
 
+  <section class="cards-container">
 
-  <script src="script.js"></script>
+    <!-- 1 -->
+    <article class="card" onclick="launchGame('evasion')">
+      <div class="card-top">
+        <span class="card-icon">⚡</span>
+        <span class="tag">REFLEX</span>
+      </div>
+      <h2>Cyber-Evasion</h2>
+      <p>Lazer dalgalarından kaç, kalkanları topla, combo'yu koru.</p>
+      <div class="card-footer">
+        <span id="high-evasion" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
 
+    <!-- 2 -->
+    <article class="card" onclick="launchGame('scroller')">
+      <div class="card-top">
+        <span class="card-icon">🚀</span>
+        <span class="tag">ENDLESS</span>
+      </div>
+      <h2>Space Collector</h2>
+      <p>Gemiyi kontrol et, enerjini yönet, kristalleri topla.</p>
+      <div class="card-footer">
+        <span id="high-scroller" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
+
+    <!-- 3 -->
+    <article class="card" onclick="launchGame('jumper')">
+      <div class="card-top">
+        <span class="card-icon">🌀</span>
+        <span class="tag">TIMING</span>
+      </div>
+      <h2>Precision Jumper</h2>
+      <p>Dönen yörüngede doğru anda zıpla. Perfect zamanlama bonusu.</p>
+      <div class="card-footer">
+        <span id="high-jumper" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
+
+    <!-- 4 -->
+    <article class="card" onclick="launchGame('snake')">
+      <div class="card-top">
+        <span class="card-icon">🐍</span>
+        <span class="tag">CLASSIC</span>
+      </div>
+      <h2>Neon Snake</h2>
+      <p>Yılanı büyüt, duvarlardan ve kendinden kaç. Swipe ile yön ver.</p>
+      <div class="card-footer">
+        <span id="high-snake" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
+
+    <!-- 5 -->
+    <article class="card" onclick="launchGame('breaker')">
+      <div class="card-top">
+        <span class="card-icon">🧱</span>
+        <span class="tag">ARCADE</span>
+      </div>
+      <h2>Neon Breaker</h2>
+      <p>Topu kontrol et, tüm neon blokları kır. Her kırılan puan.</p>
+      <div class="card-footer">
+        <span id="high-breaker" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
+
+    <!-- 6 -->
+    <article class="card" onclick="launchGame('flap')">
+      <div class="card-top">
+        <span class="card-icon">🕊️</span>
+        <span class="tag">TAP</span>
+      </div>
+      <h2>Cyber Flap</h2>
+      <p>Dokunarak yüksel, neon borulardan geç. Tek hata son.</p>
+      <div class="card-footer">
+        <span id="high-flap" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
+
+    <!-- 7 -->
+    <article class="card" onclick="launchGame('pong')">
+      <div class="card-top">
+        <span class="card-icon">🏓</span>
+        <span class="tag">VERSUS</span>
+      </div>
+      <h2>Neon Pong</h2>
+      <p>Yapay zekaya karşı raketi kontrol et. Sayı kaybedince biter.</p>
+      <div class="card-footer">
+        <span id="high-pong" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
+
+    <!-- 8 -->
+    <article class="card" onclick="launchGame('reflex')">
+      <div class="card-top">
+        <span class="card-icon">🎯</span>
+        <span class="tag">SPEED</span>
+      </div>
+      <h2>Reflex Grid</h2>
+      <p>Beliren hedefleri hızlıca vur. Kaçırırsan oyun biter.</p>
+      <div class="card-footer">
+        <span id="high-reflex" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
+
+    <!-- 9 -->
+    <article class="card" onclick="launchGame('memory')">
+      <div class="card-top">
+        <span class="card-icon">🧠</span>
+        <span class="tag">MEMORY</span>
+      </div>
+      <h2>Memory Matrix</h2>
+      <p>Yanıp sönen diziyi tekrarla. Her tur bir adım daha uzar.</p>
+      <div class="card-footer">
+        <span id="high-memory" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
+
+    <!-- 10 -->
+    <article class="card" onclick="launchGame('sync')">
+      <div class="card-top">
+        <span class="card-icon">🎵</span>
+        <span class="tag">RHYTHM</span>
+      </div>
+      <h2>Pulse Sync</h2>
+      <p>Hareketli ibreyi yeşil bölgede yakala. Perfect = büyük bonus.</p>
+      <div class="card-footer">
+        <span id="high-sync" class="high-score-badge">BEST 0</span>
+        <button class="btn">OYNA</button>
+      </div>
+    </article>
+
+  </section>
+
+  <section class="daily-card">
+    <div>
+      <span class="panel-label">DAILY CHALLENGE</span>
+      <h3>Bugünün Görevi</h3>
+      <p id="daily-text">Cyber-Evasion'da 300 puana ulaş.</p>
+    </div>
+    <div class="daily-progress">
+      <strong id="daily-progress-text">0 / 300</strong>
+      <div class="xp-bar"><i id="daily-fill"></i></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============= OYUN EKRANI ============= -->
+<main id="game-screen" class="screen">
+
+  <div class="game-header">
+    <button class="back-btn" onclick="showMenu()">← Menü</button>
+    <div class="game-title" id="game-title">GAME</div>
+    <div class="score-board">SKOR <span id="score">0</span></div>
+  </div>
+
+  <div class="game-stats">
+    <span id="game-stat-left">READY</span>
+    <span id="combo-label" class="combo-label">COMBO ×1</span>
+    <span id="game-stat-right"></span>
+  </div>
+
+  <div class="canvas-wrapper">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <div class="control-hint" id="control-hint">Dokun / basılı tut</div>
+
+  <div id="game-over" class="overlay hidden">
+    <div class="overlay-glow">✦</div>
+    <div id="record-badge" class="record-badge hidden">🏆 YENİ REKOR 🏆</div>
+    <span class="panel-label">RUN COMPLETE</span>
+    <h2>Görev Bitti</h2>
+    <p>Skorun</p>
+    <strong class="final-score" id="final-score">0</strong>
+    <div id="result-detail" class="result-detail"></div>
+    <div class="overlay-buttons">
+      <button class="btn" onclick="restartCurrentGame()">TEKRAR DENE</button>
+      <button class="btn secondary" onclick="showMenu()">MENÜYE DÖN</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- ============= MODAL ============= -->
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
